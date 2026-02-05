@@ -1,0 +1,35 @@
+<div class="modal" id="taskModal" aria-hidden="true">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <h3 id="modalTitle">New task</h3>
+      <button class="icon-btn" id="closeModal" aria-label="Close">×</button>
+    </div>
+    <form id="taskForm" class="modal-body">
+      <label>
+        Title
+        <input type="text" name="title" required />
+      </label>
+      <label>
+        Description
+        <textarea name="description" rows="3"></textarea>
+      </label>
+      <label>
+        Status
+        <select name="status">
+          <option value="Pending">Pending</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Done">Done</option>
+        </select>
+      </label>
+      <label>
+        Due date
+        <input type="date" name="dueDate" />
+      </label>
+      <input type="hidden" name="taskId" />
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" id="cancelModal">Cancel</button>
+        <button type="submit" class="btn primary">Save task</button>
+      </div>
+    </form>
+  </div>
+</div>

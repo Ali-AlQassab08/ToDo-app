@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <p class="eyebrow">Daily focus, visible progress</p>
+    <h1>Daily Flow</h1>
+    <p class="subtitle">Track every task, protect your streak, and see each day’s momentum.</p>
+  </div>
+  <div class="hero-actions">
+    <button class="btn primary" id="openModal">Add task</button>
+    <div class="streak">
+      <span class="streak-label">Current streak</span>
+      <strong id="streakValue">0 days</strong>
+    </div>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Today’s tasks</h2>
+      <button class="btn ghost" id="clearDone">Clear completed</button>
+    </div>
+    <div id="taskList" class="task-list"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Completion rhythm</h2>
+      <div class="legend">
+        <span class="dot"></span>
+        <span>Daily completion %</span>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="progressChart"></canvas>
+    </div>
+  </div>
+</section>
+
+{% include "task_modal.html" %}
+{% endblock %}
