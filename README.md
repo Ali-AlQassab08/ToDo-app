@@ -10,6 +10,29 @@ python app.py
 
 Open `http://127.0.0.1:5000` in your browser.
 
+## Run with Docker
+
+Build the image:
+
+```bash
+docker build -t qassab/todo_app:latest .
+```
+
+Run the container:
+
+```bash
+docker run --rm -p 5000:5000 qassab/todo_app:latest
+```
+
+Open `http://127.0.0.1:5000` in your browser.
+
+## Publish to Docker Hub
+
+```bash
+docker login
+docker push qassab/todo_app:latest
+```
+
 ## Features
 
 - Create, edit, delete tasks with title, description, status, and optional due date.
