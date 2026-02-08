@@ -147,16 +147,18 @@ Open your browser and navigate to http://127.0.0.1:5000.
 
 ### Option 2: Docker (Recommended for Production)
 
+Image version: `0.2.1`
+
 #### Build the Image
 
 ```bash
-docker build -t qassab/todo_app:latest .
+docker build -t qassab/todo_app:0.2.1 .
 ```
 
 #### Run the Container
 
 ```bash
-docker run --rm -p 5000:5000 qassab/todo_app:latest
+docker run --rm -p 5000:5000 qassab/todo_app:0.2.1
 ```
 
 The app will be available at `http://127.0.0.1:5000`.
@@ -165,7 +167,7 @@ The app will be available at `http://127.0.0.1:5000`.
 
 ```bash
 docker login
-docker push qassab/todo_app:latest
+docker push qassab/todo_app:0.2.1
 ```
 
 ---
