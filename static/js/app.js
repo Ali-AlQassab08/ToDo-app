@@ -306,19 +306,6 @@ const scheduleMidnightCheck = () => {
   }, delay);
 };
 
-openModalButton.addEventListener("click", () => openModal());
-closeModalButton.addEventListener("click", closeModal);
-cancelModalButton.addEventListener("click", closeModal);
-modal.addEventListener("click", (event) => {
-  if (event.target === modal) {
-    closeModal();
-  }
-});
-
-clearDoneButton.addEventListener("click", clearDone);
-taskForm.addEventListener("submit", handleFormSubmit);
-taskList.addEventListener("click", handleTaskClick);
-
 const init = () => {
   const tasks = loadTasks();
   updateHistoryForToday(tasks);
@@ -328,4 +315,238 @@ const init = () => {
   scheduleMidnightCheck();
 };
 
-window.addEventListener("load", init);
+// Board View Functions
+const renderBoardTask = (task) => {
+  return `
+    <div class="task board-task" data-id="${task.id}">
+      <div class="task-title">
+        <div>
+          <h3>${task.title}</h3>
+          ${task.description ? `<p class="text-sm text-[var(--muted)] mt-1">${task.description}</p>` : ''}
+        </div>
+      </div>
+      <div class="task-meta">
+        <span class="text-xs">Due ${formatDueDate(task.dueDate)}</span>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <select class="status-select flex-1 border border-[#ece3d8] rounded-lg px-2 py-1 text-sm font-inherit cursor-pointer" data-task-id="${task.id}">
+          <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>Pending</option>
+          <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+          <option value="Done" ${task.status === 'Done' ? 'selected' : ''}>Done</option>
+        </select>
+        <button class="icon-btn" data-action="edit" title="Edit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" data-action="delete" title="Delete">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `;
+};
+
+const renderBoard = () => {
+  const tasks = loadTasks();
+  const pending = tasks.filter(t => t.status === 'Pending');
+  const inProgress = tasks.filter(t => t.status === 'In Progress');
+  const done = tasks.filter(t => t.status === 'Done');
+
+  const pendingColumn = document.getElementById('pendingColumn');
+  const inProgressColumn = document.getElementById('inProgressColumn');
+  const doneColumn = document.getElementById('doneColumn');
+
+  if (!pendingColumn || !inProgressColumn || !doneColumn) {
+    console.error('Board columns not found');
+    return;
+  }
+
+  // Update counts
+  const pendingCount = document.getElementById('pendingCount');
+  const inProgressCount = document.getElementById('inProgressCount');
+  const doneCount = document.getElementById('doneCount');
+  
+  if (pendingCount) pendingCount.textContent = pending.length;
+  if (inProgressCount) inProgressCount.textContent = inProgress.length;
+  if (doneCount) doneCount.textContent = done.length;
+
+  // Render pending tasks
+  if (pending.length === 0) {
+    pendingColumn.innerHTML = '<div class="empty text-sm">No pending tasks</div>';
+  } else {
+    pendingColumn.innerHTML = pending.map(renderBoardTask).join('');
+  }
+
+  // Render in progress tasks
+  if (inProgress.length === 0) {
+    inProgressColumn.innerHTML = '<div class="empty text-sm">No tasks in progress</div>';
+  } else {
+    inProgressColumn.innerHTML = inProgress.map(renderBoardTask).join('');
+  }
+
+  // Render done tasks
+  if (done.length === 0) {
+    doneColumn.innerHTML = '<div class="empty text-sm">No completed tasks</div>';
+  } else {
+    doneColumn.innerHTML = done.map(renderBoardTask).join('');
+  }
+};
+
+const handleStatusChange = (event) => {
+  const select = event.target.closest('.status-select');
+  if (!select) return;
+
+  const taskId = select.dataset.taskId;
+  const newStatus = select.value;
+  const tasks = loadTasks();
+
+  const updated = tasks.map(task => 
+    task.id === taskId ? { ...task, status: newStatus } : task
+  );
+
+  saveTasks(updated);
+  updateHistoryForToday(updated);
+  renderBoard();
+};
+
+const handleBoardTaskClick = (event) => {
+  const button = event.target.closest('button');
+  if (!button) return;
+
+  const action = button.dataset.action;
+  const card = button.closest('.board-task');
+  if (!card) return;
+
+  const taskId = card.dataset.id;
+  const tasks = loadTasks();
+  const current = tasks.find(task => task.id === taskId);
+  if (!current) return;
+
+  if (action === 'edit') {
+    openModal(current);
+    return;
+  }
+
+  if (action === 'delete') {
+    const filtered = tasks.filter(task => task.id !== taskId);
+    saveTasks(filtered);
+    updateHistoryForToday(filtered);
+    renderBoard();
+  }
+};
+
+const clearDoneBoard = () => {
+  const tasks = loadTasks();
+  const filtered = tasks.filter(task => task.status !== 'Done');
+  saveTasks(filtered);
+  updateHistoryForToday(filtered);
+  renderBoard();
+};
+
+const initBoard = () => {
+  const tasks = loadTasks();
+  updateHistoryForToday(tasks);
+  renderBoard();
+  scheduleMidnightCheck();
+
+  // Event listeners for board
+  const clearDoneBoardBtn = document.getElementById('clearDoneBoard');
+  if (clearDoneBoardBtn) {
+    clearDoneBoardBtn.addEventListener('click', clearDoneBoard);
+  }
+
+  const pendingCol = document.getElementById('pendingColumn');
+  const inProgressCol = document.getElementById('inProgressColumn');
+  const doneCol = document.getElementById('doneColumn');
+
+  if (pendingCol) {
+    pendingCol.addEventListener('change', handleStatusChange);
+    pendingCol.addEventListener('click', handleBoardTaskClick);
+  }
+  
+  if (inProgressCol) {
+    inProgressCol.addEventListener('change', handleStatusChange);
+    inProgressCol.addEventListener('click', handleBoardTaskClick);
+  }
+  
+  if (doneCol) {
+    doneCol.addEventListener('change', handleStatusChange);
+    doneCol.addEventListener('click', handleBoardTaskClick);
+  }
+};
+
+// Universal form submit handler that works for both views
+const handleUniversalFormSubmit = (event) => {
+  event.preventDefault();
+  const tasks = loadTasks();
+  const taskId = taskForm.taskId.value;
+  const payload = {
+    id: taskId || crypto.randomUUID(),
+    title: taskForm.title.value.trim(),
+    description: taskForm.description.value.trim(),
+    status: taskForm.status.value,
+    dueDate: taskForm.dueDate.value,
+  };
+
+  if (!payload.title) return;
+
+  const updated = taskId
+    ? tasks.map((task) => (task.id === taskId ? payload : task))
+    : [...tasks, payload];
+
+  saveTasks(updated);
+  updateHistoryForToday(updated);
+  
+  // Refresh the appropriate view
+  if (document.getElementById('taskList')) {
+    renderTasks();
+    renderStreak();
+    renderChart();
+  } else if (document.getElementById('pendingColumn')) {
+    renderBoard();
+  }
+  
+  closeModal();
+};
+
+// Check if we're on the daily view or board view
+if (document.getElementById('taskList')) {
+  // Daily view initialization
+  window.addEventListener("load", () => {
+    init();
+    
+    // Set up daily view specific event listeners
+    if (openModalButton) openModalButton.addEventListener("click", () => openModal());
+    if (closeModalButton) closeModalButton.addEventListener("click", closeModal);
+    if (cancelModalButton) cancelModalButton.addEventListener("click", closeModal);
+    if (modal) {
+      modal.addEventListener("click", (event) => {
+        if (event.target === modal) closeModal();
+      });
+    }
+    if (clearDoneButton) clearDoneButton.addEventListener("click", clearDone);
+    if (taskForm) taskForm.addEventListener("submit", handleUniversalFormSubmit);
+    if (taskList) taskList.addEventListener("click", handleTaskClick);
+  });
+} else if (document.getElementById('pendingColumn')) {
+  // Board view initialization
+  window.addEventListener("load", () => {
+    initBoard();
+    
+    // Set up board view event listeners
+    if (openModalButton) openModalButton.addEventListener("click", () => openModal());
+    if (closeModalButton) closeModalButton.addEventListener("click", closeModal);
+    if (cancelModalButton) cancelModalButton.addEventListener("click", closeModal);
+    if (modal) {
+      modal.addEventListener("click", (event) => {
+        if (event.target === modal) closeModal();
+      });
+    }
+    if (taskForm) taskForm.addEventListener("submit", handleUniversalFormSubmit);
+  });
+}

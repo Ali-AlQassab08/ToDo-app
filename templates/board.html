@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="flex flex-wrap items-center justify-between gap-6 mb-8">
+  <div>
+    <p class="uppercase tracking-[0.32em] text-xs text-[var(--muted)] mt-0 mb-3">Organize and prioritize</p>
+    <h1 class="font-serif text-[clamp(2.2rem,4vw,3.4rem)] mt-0 mb-2">Task Board</h1>
+    <p class="m-0 text-[var(--muted)] max-w-[380px]">Visualize your workflow across all task stages.</p>
+  </div>
+  <div class="flex items-center gap-[18px] max-md:flex-col max-md:items-start">
+    <button class="btn primary border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(255,111,91,0.35)] hover:-translate-y-0.5" id="openModal">Add task</button>
+    <a href="/" class="btn ghost border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5 no-underline">Daily view</a>
+  </div>
+</section>
+
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <!-- Pending Column -->
+  <div class="bg-[var(--card)] rounded-3xl p-6 shadow-[0_18px_36px_var(--shadow)] animate-rise">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-serif m-0 text-[1.4rem] flex items-center gap-2">
+        Pending
+        <span class="text-sm font-sans font-normal bg-[#f8efe6] text-[var(--muted)] px-3 py-1 rounded-full" id="pendingCount">0</span>
+      </h2>
+    </div>
+    <div id="pendingColumn" class="flex flex-col gap-[14px] min-h-[200px]"></div>
+  </div>
+
+  <!-- In Progress Column -->
+  <div class="bg-[var(--card)] rounded-3xl p-6 shadow-[0_18px_36px_var(--shadow)] animate-rise animation-delay-150">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-serif m-0 text-[1.4rem] flex items-center gap-2">
+        In Progress
+        <span class="text-sm font-sans font-normal bg-[#e3f2fd] text-[var(--accent-2)] px-3 py-1 rounded-full" id="inProgressCount">0</span>
+      </h2>
+    </div>
+    <div id="inProgressColumn" class="flex flex-col gap-[14px] min-h-[200px]"></div>
+  </div>
+
+  <!-- Done Column -->
+  <div class="bg-[var(--card)] rounded-3xl p-6 shadow-[0_18px_36px_var(--shadow)] animate-rise animation-delay-150">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-serif m-0 text-[1.4rem] flex items-center gap-2">
+        Done
+        <span class="text-sm font-sans font-normal bg-[#e8f5e9] text-green-600 px-3 py-1 rounded-full" id="doneCount">0</span>
+      </h2>
+    </div>
+    <div id="doneColumn" class="flex flex-col gap-[14px] min-h-[200px]"></div>
+    <button class="btn ghost border-none px-4 py-2 rounded-lg font-medium text-sm cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5 w-full mt-4" id="clearDoneBoard">Clear completed</button>
+  </div>
+</section>
+
+{% include "task_modal.html" %}
+{% endblock %}

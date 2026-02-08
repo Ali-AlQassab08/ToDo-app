@@ -10,6 +10,11 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/board")
+def board():
+    return render_template("board.html")
+
+
 @app.route("/tasks", methods=["POST"])
 def create_task():
     # Client-side storage handles tasks; this is a stub for future persistence.
