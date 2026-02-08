@@ -1,39 +1,39 @@
 {% extends "base.html" %}
 
 {% block content %}
-<section class="hero">
+<section class="flex flex-wrap items-center justify-between gap-6 mb-8">
   <div>
-    <p class="eyebrow">Daily focus, visible progress</p>
-    <h1>Daily Flow</h1>
-    <p class="subtitle">Track every task, protect your streak, and see each day’s momentum.</p>
+    <p class="uppercase tracking-[0.32em] text-xs text-[var(--muted)] mt-0 mb-3">Daily focus, visible progress</p>
+    <h1 class="font-serif text-[clamp(2.2rem,4vw,3.4rem)] mt-0 mb-2">Daily Flow</h1>
+    <p class="m-0 text-[var(--muted)] max-w-[380px]">Track every task, protect your streak, and see each day's momentum.</p>
   </div>
-  <div class="hero-actions">
-    <button class="btn primary" id="openModal">Add task</button>
-    <div class="streak">
-      <span class="streak-label">Current streak</span>
+  <div class="flex items-center gap-[18px] max-md:flex-col max-md:items-start">
+    <button class="btn primary border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(255,111,91,0.35)] hover:-translate-y-0.5" id="openModal">Add task</button>
+    <div class="bg-[var(--card)] px-[18px] py-[14px] rounded-[18px] shadow-[0_12px_30px_var(--shadow)] flex flex-col gap-1">
+      <span class="text-[var(--muted)] text-[0.8rem]">Current streak</span>
       <strong id="streakValue">0 days</strong>
     </div>
   </div>
 </section>
 
-<section class="grid">
-  <div class="panel">
-    <div class="panel-header">
-      <h2>Today’s tasks</h2>
-      <button class="btn ghost" id="clearDone">Clear completed</button>
+<section class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-6">
+  <div class="panel bg-[var(--card)] rounded-3xl p-6 shadow-[0_18px_36px_var(--shadow)] animate-rise">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-serif m-0 text-[1.4rem]">Today's tasks</h2>
+      <button class="btn ghost border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5" id="clearDone">Clear completed</button>
     </div>
-    <div id="taskList" class="task-list"></div>
+    <div id="taskList" class="flex flex-col gap-[14px]"></div>
   </div>
 
-  <div class="panel">
-    <div class="panel-header">
-      <h2>Completion rhythm</h2>
-      <div class="legend">
-        <span class="dot"></span>
+  <div class="panel bg-[var(--card)] rounded-3xl p-6 shadow-[0_18px_36px_var(--shadow)] animate-rise animation-delay-150">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-serif m-0 text-[1.4rem]">Completion rhythm</h2>
+      <div class="flex items-center gap-2 text-[var(--muted)] text-[0.85rem]">
+        <span class="w-[10px] h-[10px] rounded-full bg-[var(--accent-2)]"></span>
         <span>Daily completion %</span>
       </div>
     </div>
-    <div class="chart-wrap">
+    <div class="h-[260px]">
       <canvas id="progressChart"></canvas>
     </div>
   </div>

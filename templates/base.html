@@ -4,14 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Daily Flow</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
     <script src="{{ url_for('static', filename='js/chart.js') }}" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
   </head>
-  <body>
+  <body class="m-0 font-sans bg-gradient-radial min-h-screen">
     <div class="bg-accent"></div>
-    <main class="shell">
+    <main class="shell relative z-10 max-w-[1080px] mx-auto px-6 pt-12 pb-20">
       {% block content %}{% endblock %}
     </main>
   </body>

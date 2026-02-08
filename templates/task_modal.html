@@ -1,34 +1,34 @@
-<div class="modal" id="taskModal" aria-hidden="true">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal-header">
-      <h3 id="modalTitle">New task</h3>
-      <button class="icon-btn" id="closeModal" aria-label="Close">×</button>
+<div class="modal fixed inset-0 bg-[rgba(11,12,18,0.4)] hidden items-center justify-center p-6" id="taskModal" aria-hidden="true">
+  <div class="bg-white rounded-3xl p-6 w-full max-w-[420px] shadow-[0_24px_60px_rgba(17,18,25,0.2)]" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="flex justify-between items-center mb-4">
+      <h3 id="modalTitle" class="m-0">New task</h3>
+      <button class="border-none bg-white rounded-[10px] px-[10px] py-[6px] cursor-pointer shadow-[0_6px_12px_rgba(17,18,25,0.08)]" id="closeModal" aria-label="Close">×</button>
     </div>
-    <form id="taskForm" class="modal-body">
-      <label>
+    <form id="taskForm" class="grid gap-3">
+      <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
         Title
-        <input type="text" name="title" required />
+        <input type="text" name="title" required class="border border-[#ece3d8] rounded-xl px-3 py-[10px] font-[inherit]" />
       </label>
-      <label>
+      <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
         Description
-        <textarea name="description" rows="3"></textarea>
+        <textarea name="description" rows="3" class="border border-[#ece3d8] rounded-xl px-3 py-[10px] font-[inherit]"></textarea>
       </label>
-      <label>
+      <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
         Status
-        <select name="status">
+        <select name="status" class="border border-[#ece3d8] rounded-xl px-3 py-[10px] font-[inherit]">
           <option value="Pending">Pending</option>
           <option value="In Progress">In Progress</option>
           <option value="Done">Done</option>
         </select>
       </label>
-      <label>
+      <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
         Due date
-        <input type="date" name="dueDate" />
+        <input type="date" name="dueDate" class="border border-[#ece3d8] rounded-xl px-3 py-[10px] font-[inherit]" />
       </label>
       <input type="hidden" name="taskId" />
-      <div class="modal-actions">
-        <button type="button" class="btn ghost" id="cancelModal">Cancel</button>
-        <button type="submit" class="btn primary">Save task</button>
+      <div class="flex justify-end gap-3 mt-2">
+        <button type="button" class="btn ghost border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5" id="cancelModal">Cancel</button>
+        <button type="submit" class="btn primary border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(255,111,91,0.35)] hover:-translate-y-0.5">Save task</button>
       </div>
     </form>
   </div>
