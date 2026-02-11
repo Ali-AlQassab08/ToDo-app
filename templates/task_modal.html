@@ -22,10 +22,20 @@
         </select>
       </label>
       <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
+        Categories
+        <div class="grid gap-2">
+          <select id="categorySelect" class="category-select">
+            <option value="">Choose a category</option>
+          </select>
+          <div id="categoryPills" class="flex flex-wrap gap-2"></div>
+        </div>
+      </label>
+      <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
         Due date
         <input type="date" name="dueDate" class="border border-[#ece3d8] rounded-xl px-3 py-[10px] font-[inherit]" />
       </label>
       <input type="hidden" name="taskId" />
+      <input type="hidden" name="categories" id="categoriesInput" />
       <div class="flex justify-end gap-3 mt-2">
         <button type="button" class="btn ghost border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5" id="cancelModal">Cancel</button>
         <button type="submit" class="btn primary border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(255,111,91,0.35)] hover:-translate-y-0.5">Save task</button>

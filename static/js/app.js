@@ -11,6 +11,9 @@ const taskForm = document.getElementById("taskForm");
 const taskList = document.getElementById("taskList");
 const streakValue = document.getElementById("streakValue");
 const clearDoneButton = document.getElementById("clearDone");
+const categorySelect = document.getElementById("categorySelect");
+const categoryPills = document.getElementById("categoryPills");
+const categoriesInput = document.getElementById("categoriesInput");
 
 let chart;
 
@@ -66,6 +69,16 @@ const statusLabels = {
   Pending: "Pending",
   "In Progress": "In Progress",
   Done: "Done",
+};
+
+const CATEGORY_OPTIONS = ["Studying", "Work", "Finances", "Workout", "Other"];
+
+const CATEGORY_STYLES = {
+  Studying: { bg: "#c7d2fe", text: "#1c1f33" },
+  Work: { bg: "#b7ddff", text: "#16263a" },
+  Finances: { bg: "#ffe4a3", text: "#3d2f00" },
+  Workout: { bg: "#c9f2c7", text: "#1b3a1b" },
+  Other: { bg: "#e9d5ff", text: "#2a163f" },
 };
 
 const getToday = () => new Date().toISOString().split("T")[0];
@@ -137,6 +150,60 @@ const formatDueDate = (value) => {
   });
 };
 
+const normalizeCategories = (categories) => {
+  if (!Array.isArray(categories)) {
+    return [];
+  }
+  const filtered = categories.filter((entry) => CATEGORY_OPTIONS.includes(entry));
+  return [...new Set(filtered)];
+};
+
+const renderCategoryTags = (categories) => {
+  const list = normalizeCategories(categories);
+  if (list.length === 0) {
+    return "";
+  }
+  const tags = list
+    .map((category) => {
+      const style = CATEGORY_STYLES[category] || { bg: "#e5e7eb", text: "#111827" };
+      return `<span class="tag-pill" style="--tag-bg: ${style.bg}; --tag-color: ${style.text};">${category}</span>`;
+    })
+    .join("");
+  return `<div class="task-tags">${tags}</div>`;
+};
+
+const renderCategoryPills = (categories) => {
+  if (!categoryPills) {
+    return;
+  }
+  const list = normalizeCategories(categories);
+  if (categoriesInput) {
+    categoriesInput.value = JSON.stringify(list);
+  }
+  categoryPills.innerHTML = list
+    .map((category) => {
+      const style = CATEGORY_STYLES[category] || { bg: "#e5e7eb", text: "#111827" };
+      return `
+        <button type="button" class="tag-pill tag-pill--remove" data-value="${category}" style="--tag-bg: ${style.bg}; --tag-color: ${style.text};" aria-label="Remove ${category} category">
+          <span>${category}</span>
+          <span class="tag-pill__remove" aria-hidden="true">×</span>
+        </button>
+      `;
+    })
+    .join("");
+};
+
+const getSelectedCategories = () => {
+  if (!categoriesInput || !categoriesInput.value) {
+    return [];
+  }
+  try {
+    return normalizeCategories(JSON.parse(categoriesInput.value));
+  } catch (error) {
+    return [];
+  }
+};
+
 const renderTasks = () => {
   const tasks = loadTasks();
   if (tasks.length === 0) {
@@ -146,12 +213,14 @@ const renderTasks = () => {
 
   taskList.innerHTML = tasks
     .map((task) => {
+      const categoryMarkup = renderCategoryTags(task.categories);
       return `
       <div class="task" data-id="${task.id}">
         <div class="task-title">
           <div>
             <h3>${task.title}</h3>
             <p>${task.description || ""}</p>
+            ${categoryMarkup}
           </div>
           <span class="badge">${statusLabels[task.status]}</span>
         </div>
@@ -245,6 +314,10 @@ const openModal = (task) => {
   taskForm.description.value = task ? task.description : "";
   taskForm.status.value = task ? task.status : "Pending";
   taskForm.dueDate.value = task && task.dueDate ? task.dueDate : "";
+  if (categorySelect) {
+    categorySelect.value = "";
+  }
+  renderCategoryPills(task ? task.categories : []);
   document.getElementById("modalTitle").textContent = task
     ? "Edit task"
     : "New task";
@@ -265,6 +338,7 @@ const handleFormSubmit = (event) => {
     description: taskForm.description.value.trim(),
     status: taskForm.status.value,
     dueDate: taskForm.dueDate.value,
+    categories: getSelectedCategories(),
   };
 
   if (!payload.title) {
@@ -370,12 +444,14 @@ const init = () => {
 
 // Board View Functions
 const renderBoardTask = (task) => {
+  const categoryMarkup = renderCategoryTags(task.categories);
   return `
     <div class="task board-task" data-id="${task.id}">
       <div class="task-title">
         <div>
           <h3>${task.title}</h3>
           ${task.description ? `<p class="text-sm text-[var(--muted)] mt-1">${task.description}</p>` : ''}
+          ${categoryMarkup}
         </div>
       </div>
       <div class="task-meta">
@@ -544,6 +620,7 @@ const handleUniversalFormSubmit = (event) => {
     description: taskForm.description.value.trim(),
     status: taskForm.status.value,
     dueDate: taskForm.dueDate.value,
+    categories: getSelectedCategories(),
   };
 
   if (!payload.title) return;
@@ -585,6 +662,28 @@ if (document.getElementById('taskList')) {
     if (clearDoneButton) clearDoneButton.addEventListener("click", clearDone);
     if (taskForm) taskForm.addEventListener("submit", handleUniversalFormSubmit);
     if (taskList) taskList.addEventListener("click", handleTaskClick);
+    if (categorySelect) {
+      categorySelect.innerHTML = [
+        '<option value="">Choose a category</option>',
+        ...CATEGORY_OPTIONS.map((category) => `<option value="${category}">${category}</option>`),
+      ].join("");
+      categorySelect.addEventListener("change", () => {
+        const value = categorySelect.value;
+        if (!value) return;
+        const updated = [...getSelectedCategories(), value];
+        renderCategoryPills(updated);
+        categorySelect.value = "";
+      });
+    }
+    if (categoryPills) {
+      categoryPills.addEventListener("click", (event) => {
+        const pill = event.target.closest(".tag-pill--remove");
+        if (!pill) return;
+        const value = pill.dataset.value;
+        const updated = getSelectedCategories().filter((item) => item !== value);
+        renderCategoryPills(updated);
+      });
+    }
   });
 } else if (document.getElementById('pendingColumn')) {
   // Board view initialization
@@ -601,5 +700,27 @@ if (document.getElementById('taskList')) {
       });
     }
     if (taskForm) taskForm.addEventListener("submit", handleUniversalFormSubmit);
+    if (categorySelect) {
+      categorySelect.innerHTML = [
+        '<option value="">Choose a category</option>',
+        ...CATEGORY_OPTIONS.map((category) => `<option value="${category}">${category}</option>`),
+      ].join("");
+      categorySelect.addEventListener("change", () => {
+        const value = categorySelect.value;
+        if (!value) return;
+        const updated = [...getSelectedCategories(), value];
+        renderCategoryPills(updated);
+        categorySelect.value = "";
+      });
+    }
+    if (categoryPills) {
+      categoryPills.addEventListener("click", (event) => {
+        const pill = event.target.closest(".tag-pill--remove");
+        if (!pill) return;
+        const value = pill.dataset.value;
+        const updated = getSelectedCategories().filter((item) => item !== value);
+        renderCategoryPills(updated);
+      });
+    }
   });
 }
