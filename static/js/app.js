@@ -1,7 +1,9 @@
 const TASKS_KEY = "todoTasks";
 const HISTORY_KEY = "todoProgress";
+const THEME_KEY = "todoTheme";
 
 const modal = document.getElementById("taskModal");
+const themeToggle = document.getElementById("themeToggle");
 const openModalButton = document.getElementById("openModal");
 const closeModalButton = document.getElementById("closeModal");
 const cancelModalButton = document.getElementById("cancelModal");
@@ -11,6 +13,54 @@ const streakValue = document.getElementById("streakValue");
 const clearDoneButton = document.getElementById("clearDone");
 
 let chart;
+
+const getCssVar = (name) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+const hexToRgba = (hex, alpha) => {
+  const normalized = hex.replace("#", "");
+  if (normalized.length !== 6) {
+    return `rgba(0, 0, 0, ${alpha})`;
+  }
+  const r = parseInt(normalized.slice(0, 2), 16);
+  const g = parseInt(normalized.slice(2, 4), 16);
+  const b = parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const applyTheme = (theme) => {
+  document.documentElement.setAttribute("data-theme", theme);
+  if (themeToggle) {
+    themeToggle.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+    const label = themeToggle.querySelector("[data-theme-label]");
+    if (label) {
+      label.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+    }
+  }
+};
+
+const initTheme = () => {
+  const stored = localStorage.getItem(THEME_KEY);
+  const systemPrefersDark = window.matchMedia
+    ? window.matchMedia("(prefers-color-scheme: dark)").matches
+    : false;
+  const initial = stored || (systemPrefersDark ? "dark" : "light");
+  applyTheme(initial);
+
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      const current = document.documentElement.getAttribute("data-theme") || "light";
+      const next = current === "dark" ? "light" : "dark";
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+      if (document.getElementById("progressChart")) {
+        renderChart();
+      }
+    });
+  }
+};
+
+initTheme();
 
 const statusLabels = {
   Pending: "Pending",
@@ -142,6 +192,9 @@ const renderChart = () => {
     chart.destroy();
   }
 
+  const accent = getCssVar("--accent-2") || "#2a9d8f";
+  const fill = hexToRgba(accent, 0.2);
+
   chart = new Chart(ctx, {
     type: "line",
     data: {
@@ -150,8 +203,8 @@ const renderChart = () => {
         {
           label: "Completion",
           data,
-          borderColor: "#2a9d8f",
-          backgroundColor: "rgba(42, 157, 143, 0.2)",
+          borderColor: accent,
+          backgroundColor: fill,
           tension: 0.35,
           fill: true,
         },

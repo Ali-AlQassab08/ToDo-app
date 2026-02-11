@@ -12,9 +12,28 @@
   --muted: #5a5f73;
   --paper: #f7f2ea;
   --card: #ffffff;
+  --surface: #fffdf9;
+  --border: #f0e5dc;
+  --border-strong: #ecdccc;
   --accent: #ff6f5b;
   --accent-2: #2a9d8f;
   --shadow: rgba(17, 18, 25, 0.12);
+  --bg-gradient: radial-gradient(circle at top left, #fff7e5 0%, #f6f0ff 45%, #eef4ff 100%);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #f4f1ea;
+  --muted: #b2b6c6;
+  --paper: #0f121a;
+  --card: #181c27;
+  --surface: #1e2231;
+  --border: #2a3041;
+  --border-strong: #3a4257;
+  --accent: #ff8f7b;
+  --accent-2: #55c4b8;
+  --shadow: rgba(5, 6, 10, 0.45);
+  --bg-gradient: radial-gradient(circle at top left, #2a1f2a 0%, #151a2b 45%, #0f121a 100%);
 }
 
 /* Global Styles */
@@ -25,7 +44,7 @@
 body {
   font-family: "Space Grotesk", system-ui, sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at top left, #fff7e5 0%, #f6f0ff 45%, #eef4ff 100%);
+  background: var(--bg-gradient);
 }
 
 /* Background Accent Blur */
@@ -38,6 +57,59 @@ body {
   filter: blur(60px);
   opacity: 0.65;
   z-index: 0;
+}
+
+[data-theme="dark"] .bg-accent {
+  background: conic-gradient(from 180deg, #4b2b3b, #2d3554, #1f2a3d, #4b2b3b);
+  opacity: 0.5;
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 12px 24px var(--shadow);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.theme-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px var(--shadow);
+}
+
+.theme-toggle__icon {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 6px rgba(255, 111, 91, 0.15);
+}
+
+[data-theme="dark"] .theme-toggle__icon {
+  background: var(--accent-2);
+  box-shadow: 0 0 0 6px rgba(85, 196, 184, 0.18);
+}
+
+@media (max-width: 640px) {
+  .theme-toggle {
+    top: 16px;
+    right: 16px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+  }
 }
 
 /* Font Utilities */
@@ -76,12 +148,12 @@ body {
 
 /* Task Styles (for dynamically generated content) */
 .task {
-  border: 1px solid #f0e5dc;
+  border: 1px solid var(--border);
   border-radius: 18px;
   padding: 16px;
   display: grid;
   gap: 8px;
-  background: #fffdf9;
+  background: var(--surface);
 }
 
 .task-title {
@@ -102,7 +174,7 @@ body {
   letter-spacing: 0.18em;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #f8efe6;
+  background: var(--paper);
   color: var(--muted);
 }
 
@@ -121,7 +193,7 @@ body {
 
 .icon-btn {
   border: none;
-  background: #fff;
+  background: var(--card);
   border-radius: 10px;
   padding: 6px 10px;
   cursor: pointer;
@@ -138,6 +210,25 @@ body {
   padding: 24px;
   text-align: center;
   color: var(--muted);
-  border: 1px dashed #ecdccc;
+  border: 1px dashed var(--border-strong);
   border-radius: 16px;
+}
+
+.btn.ghost {
+  background: var(--card) !important;
+  color: var(--ink) !important;
+  border-color: var(--border) !important;
+}
+
+.status-select {
+  border-color: var(--border) !important;
+  background: var(--card);
+  color: var(--ink);
+}
+
+#pendingCount,
+#inProgressCount,
+#doneCount {
+  background: var(--paper) !important;
+  color: var(--muted) !important;
 }

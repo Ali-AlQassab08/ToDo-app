@@ -67,6 +67,7 @@ A modern, lightweight to-do application that helps you track daily tasks and bui
 - ⌨️ **Accessible** - Semantic HTML, ARIA attributes, and keyboard-friendly interactions
 - 🚀 **Offline-First** - All data stored locally; works without internet after first load
 - 🌙 **Auto-Sync at Midnight** - Daily history is automatically updated at midnight for accurate streak calculation
+- 🌗 **Dark Mode Toggle** - Switch themes instantly with preference saved in localStorage
 
 ---
 
@@ -81,6 +82,7 @@ ToDo-app/
 ├── templates/
 │   ├── base.html             # Base HTML template with layout structure
 │   ├── index.html            # Main page with task list and chart
+│   ├── board.html            # Kanban-style board view for tasks
 │   └── task_modal.html       # Task creation/edit modal form
 └── static/
     ├── css/
@@ -214,6 +216,8 @@ User Interaction (Button Click)
   }
   ```
 
+- **`todoTheme`** - Stores the last selected theme (`light` or `dark`).
+
 ### Streak Calculation Logic
 
 1. Retrieves all saved daily history entries
@@ -261,9 +265,13 @@ Edit [static/css/styles.css](static/css/styles.css) CSS variables at the root:
   --muted: #5a5f73;         /* Secondary text */
   --paper: #f7f2ea;         /* Background */
   --card: #ffffff;          /* Card background */
+  --surface: #fffdf9;       /* Elevated surface */
+  --border: #f0e5dc;        /* Borders */
+  --border-strong: #ecdccc; /* Dashed borders */
   --accent: #ff6f5b;        /* Primary CTA (orange) */
   --accent-2: #2a9d8f;      /* Secondary (teal/chart) */
   --shadow: rgba(...);      /* Box shadows */
+  --bg-gradient: ...;       /* App background gradient */
 }
 ```
 
@@ -274,7 +282,6 @@ Edit [static/css/styles.css](static/css/styles.css) CSS variables at the root:
 - **Export/Import** - Download tasks as CSV or JSON
 - **Notifications** - Browser push reminders for due dates
 - **Tags/Categories** - Organize tasks by labels
-- **Dark Mode** - Theme toggle in settings
 - **Mobile App** - React Native or Flutter wrapper for iOS/Android
 
 ---

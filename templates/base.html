@@ -12,6 +12,10 @@
   </head>
   <body class="m-0 font-sans bg-gradient-radial min-h-screen">
     <div class="bg-accent"></div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false">
+      <span class="theme-toggle__icon" aria-hidden="true"></span>
+      <span class="theme-toggle__label" data-theme-label>Dark mode</span>
+    </button>
     <main class="shell relative z-10 max-w-[1080px] mx-auto px-6 pt-12 pb-20">
       {% block content %}{% endblock %}
     </main>
