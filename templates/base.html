@@ -16,8 +16,13 @@
       <span class="theme-toggle__icon" aria-hidden="true"></span>
       <span class="theme-toggle__label" data-theme-label>Dark mode</span>
     </button>
+    <button class="export-toggle" id="exportToggle" type="button" title="Export tasks">
+      <span class="export-toggle__icon" aria-hidden="true">↓</span>
+      <span class="export-toggle__label">Export</span>
+    </button>
     <main class="shell relative z-10 max-w-[1080px] mx-auto px-6 pt-12 pb-20">
       {% block content %}{% endblock %}
     </main>
+    {% include "export_modal.html" %}
   </body>
 </html>

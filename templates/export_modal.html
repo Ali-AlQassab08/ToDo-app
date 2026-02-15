@@ -1,0 +1,26 @@
+<!-- Export Modal -->
+<div class="modal" id="exportModal" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+  <div class="modal-dialog">
+    <div class="modal-content export-modal-content">
+      <button class="modal__close" id="closeExportModal" type="button" aria-label="Close export dialog">×</button>
+      <h2 id="exportModalTitle" class="modal__title">Export Tasks</h2>
+      <p class="modal__subtitle">Choose the format to export your tasks</p>
+      <div class="export-options">
+        <button class="export-option-btn" id="exportCSV" type="button">
+          <div class="export-option-icon">📊</div>
+          <div class="export-option-content">
+            <h3>CSV Format</h3>
+            <p>Export as spreadsheet-compatible format</p>
+          </div>
+        </button>
+        <button class="export-option-btn" id="exportJSON" type="button">
+          <div class="export-option-icon">📄</div>
+          <div class="export-option-content">
+            <h3>JSON Format</h3>
+            <p>Export as structured data format</p>
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

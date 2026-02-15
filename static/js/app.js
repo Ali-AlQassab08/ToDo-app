@@ -724,3 +724,109 @@ if (document.getElementById('taskList')) {
     }
   });
 }
+
+// Export functionality
+const exportModal = document.getElementById("exportModal");
+const exportToggle = document.getElementById("exportToggle");
+const closeExportModal = document.getElementById("closeExportModal");
+const exportCSVButton = document.getElementById("exportCSV");
+const exportJSONButton = document.getElementById("exportJSON");
+
+if (exportToggle) {
+  exportToggle.addEventListener("click", () => {
+    if (exportModal) {
+      exportModal.classList.add("active");
+    }
+  });
+}
+
+if (closeExportModal) {
+  closeExportModal.addEventListener("click", () => {
+    if (exportModal) {
+      exportModal.classList.remove("active");
+    }
+  });
+}
+
+if (exportModal) {
+  exportModal.addEventListener("click", (event) => {
+    if (event.target === exportModal) {
+      exportModal.classList.remove("active");
+    }
+  });
+}
+
+const downloadFile = (content, filename, type) => {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const exportAsCSV = () => {
+  const tasks = loadTasks();
+  if (tasks.length === 0) {
+    alert("No tasks to export");
+    return;
+  }
+
+  // CSV Header
+  const headers = ["Name", "Description", "Due Date", "Tags", "Status"];
+  const csvRows = [headers.join(",")];
+
+  // CSV Data
+  tasks.forEach((task) => {
+    const name = `"${(task.title || "").replace(/"/g, '""')}"`;
+    const description = `"${(task.description || "").replace(/"/g, '""')}"`;
+    const dueDate = task.dueDate || "";
+    const tags = `"${normalizeCategories(task.categories).join(", ")}"`;
+    const status = task.status || "";
+    
+    csvRows.push([name, description, dueDate, tags, status].join(","));
+  });
+
+  const csvContent = csvRows.join("\n");
+  const timestamp = new Date().toISOString().split("T")[0];
+  downloadFile(csvContent, `tasks_${timestamp}.csv`, "text/csv");
+  
+  if (exportModal) {
+    exportModal.classList.remove("active");
+  }
+};
+
+const exportAsJSON = () => {
+  const tasks = loadTasks();
+  if (tasks.length === 0) {
+    alert("No tasks to export");
+    return;
+  }
+
+  const exportData = tasks.map((task) => ({
+    name: task.title || "",
+    description: task.description || "",
+    dueDate: task.dueDate || "",
+    tags: normalizeCategories(task.categories),
+    status: task.status || "",
+  }));
+
+  const jsonContent = JSON.stringify(exportData, null, 2);
+  const timestamp = new Date().toISOString().split("T")[0];
+  downloadFile(jsonContent, `tasks_${timestamp}.json`, "application/json");
+  
+  if (exportModal) {
+    exportModal.classList.remove("active");
+  }
+};
+
+if (exportCSVButton) {
+  exportCSVButton.addEventListener("click", exportAsCSV);
+}
+
+if (exportJSONButton) {
+  exportJSONButton.addEventListener("click", exportAsJSON);
+}

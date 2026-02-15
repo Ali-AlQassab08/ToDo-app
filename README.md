@@ -281,7 +281,6 @@ Edit [static/css/styles.css](static/css/styles.css) CSS variables at the root:
 - **User Authentication** - Add login system for multi-user support
 - **Export/Import** - Download tasks as CSV or JSON
 - **Notifications** - Browser push reminders for due dates
-- **Tags/Categories** - Organize tasks by labels
 - **Mobile App** - React Native or Flutter wrapper for iOS/Android
 
 ---
