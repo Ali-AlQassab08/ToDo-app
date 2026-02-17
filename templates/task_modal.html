@@ -34,6 +34,15 @@
         Due date
         <input type="date" name="dueDate" class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]" />
       </label>
+      <div class="grid gap-[8px] text-[0.9rem] text-[var(--muted)]">
+        <span>Sub-tasks</span>
+        <div id="subtaskList" class="subtask-list"></div>
+        <div class="subtask-input-row">
+          <input type="text" id="subtaskInput" placeholder="Add a sub-task" class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]" />
+          <button type="button" class="btn ghost px-4 py-2 rounded-full font-semibold text-[0.85rem] cursor-pointer transition-all duration-200 bg-[var(--card)] text-[var(--ink)] border border-[var(--border)] hover:-translate-y-0.5" id="addSubtask">Add</button>
+        </div>
+        <span class="text-[0.8rem] text-[var(--muted)]">Check off sub-tasks directly on the task card.</span>
+      </div>
       <input type="hidden" name="taskId" />
       <input type="hidden" name="categories" id="categoriesInput" />
       <div class="flex justify-end gap-3 mt-2">
