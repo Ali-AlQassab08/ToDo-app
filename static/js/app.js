@@ -697,6 +697,12 @@ const handleStatusChange = (event) => {
   saveTasks(updated);
   updateHistoryForToday(updated);
   renderBoard();
+  
+  // Update chart and streak in case user navigates back to daily view
+  if (document.getElementById('progressChart')) {
+    renderChart();
+    renderStreak();
+  }
 };
 
 const handleBoardTaskClick = (event) => {
@@ -722,6 +728,12 @@ const handleBoardTaskClick = (event) => {
     saveTasks(filtered);
     updateHistoryForToday(filtered);
     renderBoard();
+    
+    // Update chart and streak
+    if (document.getElementById('progressChart')) {
+      renderChart();
+      renderStreak();
+    }
   }
 };
 
@@ -731,6 +743,12 @@ const clearDoneBoard = () => {
   saveTasks(filtered);
   updateHistoryForToday(filtered);
   renderBoard();
+  
+  // Update chart and streak in case user navigates back to daily view
+  if (document.getElementById('progressChart')) {
+    renderChart();
+    renderStreak();
+  }
 };
 
 // Drag and Drop Functions
@@ -789,6 +807,12 @@ const handleDrop = (event) => {
   saveTasks(updated);
   updateHistoryForToday(updated);
   renderBoard();
+  
+  // Update chart and streak in case user navigates back to daily view
+  if (document.getElementById('progressChart')) {
+    renderChart();
+    renderStreak();
+  }
 };
 
 const initBoard = () => {
