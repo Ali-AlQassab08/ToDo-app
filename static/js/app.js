@@ -17,6 +17,10 @@ const categoriesInput = document.getElementById("categoriesInput");
 const subtaskList = document.getElementById("subtaskList");
 const subtaskInput = document.getElementById("subtaskInput");
 const addSubtaskButton = document.getElementById("addSubtask");
+const isRecurringCheckbox = document.getElementById("isRecurringCheckbox");
+const recurrenceOptions = document.getElementById("recurrenceOptions");
+const recurrencePattern = document.getElementById("recurrencePattern");
+const recurrencePreview = document.getElementById("recurrencePreview");
 
 const getSubtaskElements = () => ({
   list: document.getElementById("subtaskList"),
@@ -179,6 +183,72 @@ const normalizeSubtasks = (subtasks) => {
     .filter((item) => item.text);
 };
 
+// Recurrence helper functions
+const calculateNextOccurrence = (currentDate, pattern) => {
+  const date = new Date(currentDate);
+  switch (pattern) {
+    case "daily":
+      date.setDate(date.getDate() + 1);
+      break;
+    case "weekly":
+      date.setDate(date.getDate() + 7);
+      break;
+    case "monthly":
+      date.setMonth(date.getMonth() + 1);
+      break;
+    default:
+      return null;
+  }
+  return date.toISOString().split("T")[0];
+};
+
+const getRecurrenceDisplay = (pattern) => {
+  switch (pattern) {
+    case "daily":
+      return "Repeats daily";
+    case "weekly":
+      return "Repeats weekly";
+    case "monthly":
+      return "Repeats monthly";
+    default:
+      return "No recurring pattern selected";
+  }
+};
+
+const shouldCreateNextOccurrence = (task, endDate) => {
+  if (!endDate) return true;
+  const nextOccurrence = calculateNextOccurrence(task.dueDate, task.recurrencePattern);
+  return nextOccurrence && nextOccurrence <= endDate;
+};
+
+const createRecurringTaskInstance = (parentTask) => {
+  const nextDueDate = calculateNextOccurrence(parentTask.dueDate, parentTask.recurrencePattern);
+  if (!nextDueDate) return null;
+
+  if (parentTask.recurrenceEndDate && nextDueDate > parentTask.recurrenceEndDate) {
+    return null;
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    title: parentTask.title,
+    description: parentTask.description,
+    status: "Pending",
+    dueDate: nextDueDate,
+    categories: [...parentTask.categories],
+    subtasks: parentTask.subtasks.map(st => ({
+      id: crypto.randomUUID(),
+      text: st.text,
+      done: false,
+    })),
+    isRecurring: true,
+    recurrencePattern: parentTask.recurrencePattern,
+    recurrenceEndDate: parentTask.recurrenceEndDate,
+    parentRecurringId: parentTask.parentRecurringId || parentTask.id,
+    isRecurringInstance: true,
+  };
+};
+
 const renderSubtaskChecklist = (subtasks, taskId) => {
   const list = normalizeSubtasks(subtasks);
   if (list.length === 0) {
@@ -300,12 +370,23 @@ const renderTasks = () => {
     .map((task) => {
       const categoryMarkup = renderCategoryTags(task.categories);
       const subtaskMarkup = renderSubtaskChecklist(task.subtasks, task.id);
+      const recurrenceMarkup = task.isRecurring && task.recurrencePattern ? 
+        `<span class="tag-pill" style="--tag-bg: #c7d2fe; --tag-color: #4c1d95; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; margin-bottom: 0.5rem;">
+           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+             <path d="M23 4v6h-6"></path>
+             <path d="M1 20v-6h6"></path>
+             <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"></path>
+           </svg>
+           ${getRecurrenceDisplay(task.recurrencePattern)}
+         </span>` 
+        : "";
       return `
-      <div class="task" data-id="${task.id}">
+      <div class="task" data-id="${task.id}" ${task.isRecurring ? 'data-recurring="true"' : ''}>
         <div class="task-title">
           <div>
             <h3>${task.title}</h3>
             <p>${task.description || ""}</p>
+            ${recurrenceMarkup}
             ${categoryMarkup}
             ${subtaskMarkup}
           </div>
@@ -392,6 +473,29 @@ const renderChart = () => {
   });
 };
 
+const updateRecurrencePreview = () => {
+  if (!recurrencePreview || !recurrencePattern) return;
+  const pattern = recurrencePattern.value;
+  recurrencePreview.textContent = `Preview: ${getRecurrenceDisplay(pattern)}`;
+};
+
+const handleRecurrenceToggle = () => {
+  if (!isRecurringCheckbox || !recurrenceOptions) return;
+  if (isRecurringCheckbox.checked) {
+    recurrenceOptions.classList.remove("hidden");
+  } else {
+    recurrenceOptions.classList.add("hidden");
+    if (recurrencePattern) {
+      recurrencePattern.value = "";
+    }
+    updateRecurrencePreview();
+  }
+};
+
+const handleRecurrencePatternChange = () => {
+  updateRecurrencePreview();
+};
+
 const openModal = (task) => {
   modal.classList.add("show");
   modal.setAttribute("aria-hidden", "false");
@@ -404,6 +508,22 @@ const openModal = (task) => {
   if (categorySelect) {
     categorySelect.value = "";
   }
+  
+  // Handle recurrence fields
+  if (isRecurringCheckbox) {
+    isRecurringCheckbox.checked = task && task.isRecurring ? true : false;
+  }
+  if (recurrencePattern) {
+    recurrencePattern.value = task && task.recurrencePattern ? task.recurrencePattern : "";
+  }
+  const recurrenceEndDateInput = document.querySelector('input[name="recurrenceEndDate"]');
+  if (recurrenceEndDateInput) {
+    recurrenceEndDateInput.value = task && task.recurrenceEndDate ? task.recurrenceEndDate : "";
+  }
+  // Properly show/hide recurrence options and update preview
+  handleRecurrenceToggle();
+  updateRecurrencePreview();
+  
   renderCategoryPills(task ? task.categories : []);
   renderSubtaskEditor(task ? task.subtasks : []);
   const elements = getSubtaskElements();
@@ -485,6 +605,13 @@ const handleFormSubmit = (event) => {
   event.preventDefault();
   const tasks = loadTasks();
   const taskId = taskForm.taskId.value;
+  const existingTask = taskId ? tasks.find(t => t.id === taskId) : null;
+  
+  const isRecurring = isRecurringCheckbox ? isRecurringCheckbox.checked : false;
+  const recurrencePatternValue = recurrencePattern ? recurrencePattern.value : "";
+  const recurrenceEndDateInput = document.querySelector('input[name="recurrenceEndDate"]');
+  const recurrenceEndDate = recurrenceEndDateInput ? recurrenceEndDateInput.value : "";
+  
   const payload = {
     id: taskId || crypto.randomUUID(),
     title: taskForm.title.value.trim(),
@@ -493,15 +620,28 @@ const handleFormSubmit = (event) => {
     dueDate: taskForm.dueDate.value,
     categories: getSelectedCategories(),
     subtasks: getSubtasksFromEditor(),
+    isRecurring: isRecurring && recurrencePatternValue ? true : false,
+    recurrencePattern: isRecurring && recurrencePatternValue ? recurrencePatternValue : null,
+    recurrenceEndDate: isRecurring && recurrenceEndDate ? recurrenceEndDate : null,
+    parentRecurringId: existingTask ? existingTask.parentRecurringId : null,
+    isRecurringInstance: existingTask ? existingTask.isRecurringInstance : false,
   };
 
   if (!payload.title) {
     return;
   }
 
-  const updated = taskId
+  let updated = taskId
     ? tasks.map((task) => (task.id === taskId ? payload : task))
     : [...tasks, payload];
+
+  // If this is a new recurring task and it's marked as recurring, create the first instance
+  if (!taskId && payload.isRecurring && payload.recurrencePattern && payload.dueDate) {
+    const nextInstance = createRecurringTaskInstance(payload);
+    if (nextInstance) {
+      updated = [...updated, nextInstance];
+    }
+  }
 
   saveTasks(updated);
   updateHistoryForToday(updated);
@@ -546,7 +686,7 @@ const handleTaskClick = (event) => {
   }
 
   if (action === "toggle") {
-    const updated = tasks.map((task) =>
+    let updated = tasks.map((task) =>
       task.id === taskId
         ? {
             ...task,
@@ -554,6 +694,16 @@ const handleTaskClick = (event) => {
           }
         : task
     );
+    
+    // If a recurring task is marked as Done, create the next occurrence
+    const updatedTask = updated.find(t => t.id === taskId);
+    if (updatedTask && updatedTask.status === "Done" && updatedTask.isRecurring && updatedTask.recurrencePattern) {
+      const nextInstance = createRecurringTaskInstance(updatedTask);
+      if (nextInstance) {
+        updated = [...updated, nextInstance];
+      }
+    }
+    
     saveTasks(updated);
     updateHistoryForToday(updated);
     renderTasks();
@@ -572,6 +722,42 @@ const clearDone = () => {
   renderChart();
 };
 
+const ensureRecurringTasksForToday = () => {
+  const tasks = loadTasks();
+  const today = getToday();
+  let updated = [...tasks];
+  let hasChanges = false;
+
+  tasks.forEach((task) => {
+    // Only process parent recurring tasks (not instances)
+    if (!task.isRecurring || !task.recurrencePattern || task.isRecurringInstance) {
+      return;
+    }
+
+    // Check if this task is due today or has already been marked done
+    // If it's due today and there's no instance for today yet, create one
+    if (task.dueDate === today && task.status !== 'Done') {
+      // This is the main recurring task due today, keep it as is
+      return;
+    }
+
+    // If the main task is marked Done and due today, we need to create the next occurrence
+    if (task.dueDate === today && task.status === 'Done') {
+      const nextInstance = createRecurringTaskInstance(task);
+      if (nextInstance) {
+        updated.push(nextInstance);
+        hasChanges = true;
+      }
+    }
+  });
+
+  if (hasChanges) {
+    saveTasks(updated);
+  }
+
+  return updated;
+};
+
 const scheduleMidnightCheck = () => {
   const now = new Date();
   const nextMidnight = new Date(now);
@@ -579,15 +765,22 @@ const scheduleMidnightCheck = () => {
   const delay = nextMidnight.getTime() - now.getTime();
 
   setTimeout(() => {
+    ensureRecurringTasksForToday();
     const tasks = loadTasks();
     updateHistoryForToday(tasks);
     renderStreak();
     renderChart();
+    if (document.getElementById('taskList')) {
+      renderTasks();
+    } else if (document.getElementById('pendingColumn')) {
+      renderBoard();
+    }
     scheduleMidnightCheck();
   }, delay);
 };
 
 const init = () => {
+  ensureRecurringTasksForToday();
   const tasks = loadTasks();
   updateHistoryForToday(tasks);
   renderTasks();
@@ -600,12 +793,23 @@ const init = () => {
 const renderBoardTask = (task) => {
   const categoryMarkup = renderCategoryTags(task.categories);
   const subtaskMarkup = renderSubtaskChecklist(task.subtasks, task.id);
+  const recurrenceMarkup = task.isRecurring && task.recurrencePattern ? 
+    `<span class="tag-pill" style="--tag-bg: #c7d2fe; --tag-color: #4c1d95; display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; margin-bottom: 0.5rem;">
+       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;">
+         <path d="M23 4v6h-6"></path>
+         <path d="M1 20v-6h6"></path>
+         <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"></path>
+       </svg>
+       ${getRecurrenceDisplay(task.recurrencePattern)}
+     </span>` 
+    : "";
   return `
-    <div class="task board-task" data-id="${task.id}" draggable="true">
+    <div class="task board-task" data-id="${task.id}" draggable="true" ${task.isRecurring ? 'data-recurring="true"' : ''}>
       <div class="task-title">
         <div>
           <h3>${task.title}</h3>
           ${task.description ? `<p class="text-sm text-[var(--muted)] mt-1">${task.description}</p>` : ''}
+          <div style="margin-bottom: 0.5rem;">${recurrenceMarkup}</div>
           ${categoryMarkup}
           ${subtaskMarkup}
         </div>
@@ -690,9 +894,18 @@ const handleStatusChange = (event) => {
   const newStatus = select.value;
   const tasks = loadTasks();
 
-  const updated = tasks.map(task => 
+  let updated = tasks.map(task => 
     task.id === taskId ? { ...task, status: newStatus } : task
   );
+
+  // If a recurring task is marked as Done, create the next occurrence
+  const updatedTask = updated.find(t => t.id === taskId);
+  if (updatedTask && newStatus === "Done" && updatedTask.isRecurring && updatedTask.recurrencePattern) {
+    const nextInstance = createRecurringTaskInstance(updatedTask);
+    if (nextInstance) {
+      updated = [...updated, nextInstance];
+    }
+  }
 
   saveTasks(updated);
   updateHistoryForToday(updated);
@@ -816,6 +1029,7 @@ const handleDrop = (event) => {
 };
 
 const initBoard = () => {
+  ensureRecurringTasksForToday();
   const tasks = loadTasks();
   updateHistoryForToday(tasks);
   renderBoard();
@@ -859,6 +1073,13 @@ const handleUniversalFormSubmit = (event) => {
   event.preventDefault();
   const tasks = loadTasks();
   const taskId = taskForm.taskId.value;
+  const existingTask = taskId ? tasks.find(t => t.id === taskId) : null;
+  
+  const isRecurring = isRecurringCheckbox ? isRecurringCheckbox.checked : false;
+  const recurrencePatternValue = recurrencePattern ? recurrencePattern.value : "";
+  const recurrenceEndDateInput = document.querySelector('input[name="recurrenceEndDate"]');
+  const recurrenceEndDate = recurrenceEndDateInput ? recurrenceEndDateInput.value : "";
+  
   const payload = {
     id: taskId || crypto.randomUUID(),
     title: taskForm.title.value.trim(),
@@ -867,13 +1088,26 @@ const handleUniversalFormSubmit = (event) => {
     dueDate: taskForm.dueDate.value,
     categories: getSelectedCategories(),
     subtasks: getSubtasksFromEditor(),
+    isRecurring: isRecurring && recurrencePatternValue ? true : false,
+    recurrencePattern: isRecurring && recurrencePatternValue ? recurrencePatternValue : null,
+    recurrenceEndDate: isRecurring && recurrenceEndDate ? recurrenceEndDate : null,
+    parentRecurringId: existingTask ? existingTask.parentRecurringId : null,
+    isRecurringInstance: existingTask ? existingTask.isRecurringInstance : false,
   };
 
   if (!payload.title) return;
 
-  const updated = taskId
+  let updated = taskId
     ? tasks.map((task) => (task.id === taskId ? payload : task))
     : [...tasks, payload];
+
+  // If this is a new recurring task and it's marked as recurring, create the first instance
+  if (!taskId && payload.isRecurring && payload.recurrencePattern && payload.dueDate) {
+    const nextInstance = createRecurringTaskInstance(payload);
+    if (nextInstance) {
+      updated = [...updated, nextInstance];
+    }
+  }
 
   saveTasks(updated);
   updateHistoryForToday(updated);
@@ -946,6 +1180,12 @@ if (document.getElementById('taskList')) {
         renderCategoryPills(updated);
       });
     }
+    if (isRecurringCheckbox) {
+      isRecurringCheckbox.addEventListener("change", handleRecurrenceToggle);
+    }
+    if (recurrencePattern) {
+      recurrencePattern.addEventListener("change", handleRecurrencePatternChange);
+    }
   });
 } else if (document.getElementById('pendingColumn')) {
   // Board view initialization
@@ -998,6 +1238,12 @@ if (document.getElementById('taskList')) {
         const updated = getSelectedCategories().filter((item) => item !== value);
         renderCategoryPills(updated);
       });
+    }
+    if (isRecurringCheckbox) {
+      isRecurringCheckbox.addEventListener("change", handleRecurrenceToggle);
+    }
+    if (recurrencePattern) {
+      recurrencePattern.addEventListener("change", handleRecurrencePatternChange);
     }
   });
 }
