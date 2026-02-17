@@ -68,6 +68,7 @@ A modern, lightweight to-do application that helps you track daily tasks and bui
 ### Views & Boards
 - 📋 **Daily View** - Main dashboard showing today's tasks with streak counter and completion graph
 - 🎯 **Kanban Board** - Three-column task board (Pending | In Progress | Done) for visual workflow management
+  - 🖱️ **Drag & Drop** - Drag tasks between columns to instantly change their status
 - 📊 **Progress Chart** - Interactive line chart displaying daily completion percentage over the last 14 days
 
 ### Productivity Features
@@ -360,9 +361,18 @@ User Interaction (Button Click)
    - **In Progress**: Tasks currently being worked on (shows count)
    - **Done**: Completed tasks with option to clear them (shows count)
 
-3. **Task Cards**
+3. **Moving Tasks Between Columns**
+   - **Drag & Drop**: Click and drag any task card to move it between columns
+     - Dragging provides visual feedback (semi-transparent with rotation)
+     - Target column highlights with dashed border when hovering
+     - Drop to instantly update the task status
+   - **Status Dropdown**: Use the status dropdown on each card for quick changes
+   - Status counts and streak/chart update in real-time
+
+4. **Task Cards**
    - Each card shows title, description, category tags, and subtasks
-   - Click a card to edit details
+   - Click the edit button (pencil icon) to modify details
+   - Click the delete button (trash icon) to remove the task
    - Status counts auto-update when tasks are modified
 
 ### Dark Mode
@@ -382,8 +392,10 @@ User Interaction (Button Click)
 ### Tips for Maximum Productivity
 
 - **Daily Ritual**: Review morning tasks and update status as you complete them
+- **Kanban Flow**: Use the Kanban board view to visualize your workflow - drag tasks naturally between columns as you work
 - **Categories**: Use categories consistently to make reviewing and filtering easier
 - **Subtasks**: Break complex tasks into smaller steps for better progress tracking
+- **Drag & Drop**: Quickly move tasks between status columns without opening the task detail modal
 - **Streak Motivation**: Aim for 100% completion daily to grow your streak
 - **Regular Export**: Export your data weekly as backup security
 - **Clear Completed**: Start each day fresh by clearing yesterday's completed tasks
