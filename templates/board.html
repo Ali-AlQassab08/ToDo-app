@@ -9,9 +9,12 @@
   </div>
   <div class="flex items-center gap-[18px] max-md:flex-col max-md:items-start">
     <button class="btn primary border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(255,111,91,0.35)] hover:-translate-y-0.5" id="openModal">Add task</button>
+    <button class="btn ghost border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5" id="toggleFilter" title="Toggle filters">🔍 Filter</button>
     <a href="/" class="btn ghost border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5 no-underline">Daily view</a>
   </div>
 </section>
+
+{% include "filter_panel.html" %}
 
 <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
   <!-- Pending Column -->

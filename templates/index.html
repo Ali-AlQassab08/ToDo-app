@@ -9,6 +9,7 @@
   </div>
   <div class="flex items-center gap-[18px] max-md:flex-col max-md:items-start">
     <button class="btn primary border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(255,111,91,0.35)] hover:-translate-y-0.5" id="openModal">Add task</button>
+    <button class="btn ghost border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5" id="toggleFilter" title="Toggle filters">🔍 Filter</button>
     <a href="/board" class="btn ghost border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5 no-underline">Board view</a>
     <div class="bg-[var(--card)] px-[18px] py-[14px] rounded-[18px] shadow-[0_12px_30px_var(--shadow)] flex flex-col gap-1">
       <span class="text-[var(--muted)] text-[0.8rem]">Current streak</span>
@@ -16,6 +17,8 @@
     </div>
   </div>
 </section>
+
+{% include "filter_panel.html" %}
 
 <section class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-6">
   <div class="panel bg-[var(--card)] rounded-3xl p-6 shadow-[0_18px_36px_var(--shadow)] animate-rise">
