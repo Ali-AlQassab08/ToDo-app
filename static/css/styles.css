@@ -194,6 +194,66 @@ body {
   margin-top: 8px;
 }
 
+.subtask-list {
+  display: grid;
+  gap: 8px;
+}
+
+.subtask-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.subtask-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.subtask-editor-label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.subtask-text-input {
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  outline: none;
+}
+
+.subtask-editor-toggle:checked + .subtask-text-input {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.subtask-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.subtask-row + .subtask-row {
+  margin-top: 6px;
+}
+
+.subtask-text.is-done {
+  text-decoration: line-through;
+}
+
 .category-select {
   appearance: none;
   border: 1px solid var(--border);

@@ -14,6 +14,14 @@ const clearDoneButton = document.getElementById("clearDone");
 const categorySelect = document.getElementById("categorySelect");
 const categoryPills = document.getElementById("categoryPills");
 const categoriesInput = document.getElementById("categoriesInput");
+const subtaskList = document.getElementById("subtaskList");
+const subtaskInput = document.getElementById("subtaskInput");
+const addSubtaskButton = document.getElementById("addSubtask");
+
+const getSubtaskElements = () => ({
+  list: document.getElementById("subtaskList"),
+  input: document.getElementById("subtaskInput"),
+});
 
 let chart;
 
@@ -158,6 +166,83 @@ const normalizeCategories = (categories) => {
   return [...new Set(filtered)];
 };
 
+const normalizeSubtasks = (subtasks) => {
+  if (!Array.isArray(subtasks)) {
+    return [];
+  }
+  return subtasks
+    .map((item) => ({
+      id: item.id || crypto.randomUUID(),
+      text: (item.text || "").trim(),
+      done: Boolean(item.done),
+    }))
+    .filter((item) => item.text);
+};
+
+const renderSubtaskChecklist = (subtasks, taskId) => {
+  const list = normalizeSubtasks(subtasks);
+  if (list.length === 0) {
+    return "";
+  }
+  const rows = list
+    .map(
+      (subtask) => `
+        <label class="subtask-row">
+          <input type="checkbox" class="subtask-toggle" data-task-id="${taskId}" data-subtask-id="${subtask.id}" ${
+            subtask.done ? "checked" : ""
+          } />
+          <span class="subtask-text ${subtask.done ? "is-done" : ""}">${subtask.text}</span>
+        </label>
+      `
+    )
+    .join("");
+  return `<div class="subtask-list">${rows}</div>`;
+};
+
+const renderSubtaskEditor = (subtasks) => {
+  const elements = getSubtaskElements();
+  if (!elements.list) {
+    return;
+  }
+  const list = normalizeSubtasks(subtasks);
+  if (list.length === 0) {
+    elements.list.innerHTML = "<div class=\"empty text-sm\">No sub-tasks yet.</div>";
+    return;
+  }
+  elements.list.innerHTML = list
+    .map(
+      (subtask) => `
+        <div class="subtask-item" data-id="${subtask.id}">
+          <label class="subtask-editor-label">
+            <input type="checkbox" class="subtask-editor-toggle" ${subtask.done ? "checked" : ""} />
+            <input type="text" class="subtask-text-input" value="${subtask.text}" />
+          </label>
+          <button type="button" class="icon-btn subtask-remove" aria-label="Remove sub-task">Remove</button>
+        </div>
+      `
+    )
+    .join("");
+};
+
+const getSubtasksFromEditor = () => {
+  const elements = getSubtaskElements();
+  if (!elements.list) {
+    return [];
+  }
+  const items = Array.from(elements.list.querySelectorAll(".subtask-item"));
+  return items
+    .map((item) => {
+      const textInput = item.querySelector(".subtask-text-input");
+      const toggle = item.querySelector(".subtask-editor-toggle");
+      return {
+        id: item.dataset.id || crypto.randomUUID(),
+        text: textInput ? textInput.value.trim() : "",
+        done: toggle ? toggle.checked : false,
+      };
+    })
+    .filter((item) => item.text);
+};
+
 const renderCategoryTags = (categories) => {
   const list = normalizeCategories(categories);
   if (list.length === 0) {
@@ -214,6 +299,7 @@ const renderTasks = () => {
   taskList.innerHTML = tasks
     .map((task) => {
       const categoryMarkup = renderCategoryTags(task.categories);
+      const subtaskMarkup = renderSubtaskChecklist(task.subtasks, task.id);
       return `
       <div class="task" data-id="${task.id}">
         <div class="task-title">
@@ -221,6 +307,7 @@ const renderTasks = () => {
             <h3>${task.title}</h3>
             <p>${task.description || ""}</p>
             ${categoryMarkup}
+            ${subtaskMarkup}
           </div>
           <span class="badge">${statusLabels[task.status]}</span>
         </div>
@@ -318,6 +405,11 @@ const openModal = (task) => {
     categorySelect.value = "";
   }
   renderCategoryPills(task ? task.categories : []);
+  renderSubtaskEditor(task ? task.subtasks : []);
+  const elements = getSubtaskElements();
+  if (elements.input) {
+    elements.input.value = "";
+  }
   document.getElementById("modalTitle").textContent = task
     ? "Edit task"
     : "New task";
@@ -326,6 +418,67 @@ const openModal = (task) => {
 const closeModal = () => {
   modal.classList.remove("show");
   modal.setAttribute("aria-hidden", "true");
+};
+
+const handleSubtaskAdd = () => {
+  const elements = getSubtaskElements();
+  if (!elements.input || !elements.list) {
+    return;
+  }
+  const text = elements.input.value.trim();
+  if (!text) {
+    return;
+  }
+  const updated = [...getSubtasksFromEditor(), { id: crypto.randomUUID(), text, done: false }];
+  renderSubtaskEditor(updated);
+  elements.input.value = "";
+  elements.input.focus();
+};
+
+const handleSubtaskRemove = (event) => {
+  const button = event.target.closest(".subtask-remove");
+  if (!button) {
+    return;
+  }
+  const row = button.closest(".subtask-item");
+  if (!row) {
+    return;
+  }
+  const updated = getSubtasksFromEditor().filter((item) => item.id !== row.dataset.id);
+  renderSubtaskEditor(updated);
+};
+
+const handleSubtaskToggle = (event) => {
+  const checkbox = event.target.closest(".subtask-toggle");
+  if (!checkbox) {
+    return;
+  }
+  const taskId = checkbox.dataset.taskId;
+  const subtaskId = checkbox.dataset.subtaskId;
+  if (!taskId || !subtaskId) {
+    return;
+  }
+  const tasks = loadTasks();
+  const updated = tasks.map((task) => {
+    if (task.id !== taskId) {
+      return task;
+    }
+    const subtasks = normalizeSubtasks(task.subtasks).map((subtask) =>
+      subtask.id === subtaskId ? { ...subtask, done: checkbox.checked } : subtask
+    );
+    const allDone = subtasks.length > 0 && subtasks.every((subtask) => subtask.done);
+    const status = allDone ? "Done" : task.status === "Done" ? "In Progress" : task.status;
+    return { ...task, subtasks, status };
+  });
+  saveTasks(updated);
+
+  if (document.getElementById("taskList")) {
+    renderTasks();
+    renderStreak();
+    renderChart();
+  } else if (document.getElementById("pendingColumn")) {
+    renderBoard();
+  }
 };
 
 const handleFormSubmit = (event) => {
@@ -339,6 +492,7 @@ const handleFormSubmit = (event) => {
     status: taskForm.status.value,
     dueDate: taskForm.dueDate.value,
     categories: getSelectedCategories(),
+    subtasks: getSubtasksFromEditor(),
   };
 
   if (!payload.title) {
@@ -445,6 +599,7 @@ const init = () => {
 // Board View Functions
 const renderBoardTask = (task) => {
   const categoryMarkup = renderCategoryTags(task.categories);
+  const subtaskMarkup = renderSubtaskChecklist(task.subtasks, task.id);
   return `
     <div class="task board-task" data-id="${task.id}">
       <div class="task-title">
@@ -452,6 +607,7 @@ const renderBoardTask = (task) => {
           <h3>${task.title}</h3>
           ${task.description ? `<p class="text-sm text-[var(--muted)] mt-1">${task.description}</p>` : ''}
           ${categoryMarkup}
+          ${subtaskMarkup}
         </div>
       </div>
       <div class="task-meta">
@@ -595,16 +751,19 @@ const initBoard = () => {
 
   if (pendingCol) {
     pendingCol.addEventListener('change', handleStatusChange);
+    pendingCol.addEventListener('change', handleSubtaskToggle);
     pendingCol.addEventListener('click', handleBoardTaskClick);
   }
   
   if (inProgressCol) {
     inProgressCol.addEventListener('change', handleStatusChange);
+    inProgressCol.addEventListener('change', handleSubtaskToggle);
     inProgressCol.addEventListener('click', handleBoardTaskClick);
   }
   
   if (doneCol) {
     doneCol.addEventListener('change', handleStatusChange);
+    doneCol.addEventListener('change', handleSubtaskToggle);
     doneCol.addEventListener('click', handleBoardTaskClick);
   }
 };
@@ -621,6 +780,7 @@ const handleUniversalFormSubmit = (event) => {
     status: taskForm.status.value,
     dueDate: taskForm.dueDate.value,
     categories: getSelectedCategories(),
+    subtasks: getSubtasksFromEditor(),
   };
 
   if (!payload.title) return;
@@ -662,6 +822,22 @@ if (document.getElementById('taskList')) {
     if (clearDoneButton) clearDoneButton.addEventListener("click", clearDone);
     if (taskForm) taskForm.addEventListener("submit", handleUniversalFormSubmit);
     if (taskList) taskList.addEventListener("click", handleTaskClick);
+    if (taskList) taskList.addEventListener("change", handleSubtaskToggle);
+    if (subtaskList) subtaskList.addEventListener("click", handleSubtaskRemove);
+    if (addSubtaskButton) addSubtaskButton.addEventListener("click", handleSubtaskAdd);
+    if (taskForm) {
+      taskForm.addEventListener("click", (event) => {
+        if (event.target.closest("#addSubtask")) {
+          handleSubtaskAdd();
+        }
+      });
+      taskForm.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && event.target.closest("#subtaskInput")) {
+          event.preventDefault();
+          handleSubtaskAdd();
+        }
+      });
+    }
     if (categorySelect) {
       categorySelect.innerHTML = [
         '<option value="">Choose a category</option>',
@@ -700,6 +876,21 @@ if (document.getElementById('taskList')) {
       });
     }
     if (taskForm) taskForm.addEventListener("submit", handleUniversalFormSubmit);
+    if (subtaskList) subtaskList.addEventListener("click", handleSubtaskRemove);
+    if (addSubtaskButton) addSubtaskButton.addEventListener("click", handleSubtaskAdd);
+    if (taskForm) {
+      taskForm.addEventListener("click", (event) => {
+        if (event.target.closest("#addSubtask")) {
+          handleSubtaskAdd();
+        }
+      });
+      taskForm.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && event.target.closest("#subtaskInput")) {
+          event.preventDefault();
+          handleSubtaskAdd();
+        }
+      });
+    }
     if (categorySelect) {
       categorySelect.innerHTML = [
         '<option value="">Choose a category</option>',
@@ -776,7 +967,7 @@ const exportAsCSV = () => {
   }
 
   // CSV Header
-  const headers = ["Name", "Description", "Due Date", "Tags", "Status"];
+  const headers = ["Name", "Description", "Due Date", "Tags", "Sub-tasks", "Status"];
   const csvRows = [headers.join(",")];
 
   // CSV Data
@@ -786,8 +977,12 @@ const exportAsCSV = () => {
     const dueDate = task.dueDate || "";
     const tags = `"${normalizeCategories(task.categories).join(", ")}"`;
     const status = task.status || "";
-    
-    csvRows.push([name, description, dueDate, tags, status].join(","));
+    const subtaskList = normalizeSubtasks(task.subtasks)
+      .map((subtask) => `${subtask.done ? "[x]" : "[ ]"} ${subtask.text}`)
+      .join("; ");
+    const subtasks = `"${subtaskList.replace(/"/g, '""')}"`;
+
+    csvRows.push([name, description, dueDate, tags, subtasks, status].join(","));
   });
 
   const csvContent = csvRows.join("\n");
@@ -811,6 +1006,10 @@ const exportAsJSON = () => {
     description: task.description || "",
     dueDate: task.dueDate || "",
     tags: normalizeCategories(task.categories),
+    subtasks: normalizeSubtasks(task.subtasks).map((subtask) => ({
+      text: subtask.text,
+      done: subtask.done,
+    })),
     status: task.status || "",
   }));
 
