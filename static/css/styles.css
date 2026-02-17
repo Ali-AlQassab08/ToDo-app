@@ -199,6 +199,31 @@ body {
   gap: 8px;
 }
 
+/* Drag and Drop Styles */
+.board-task {
+  cursor: grab;
+  transition: all 0.2s ease;
+}
+
+.board-task:hover {
+  cursor: grab;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.board-task.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+  transform: rotate(2deg) scale(1.02);
+}
+
+[data-column].drag-over {
+  background-color: var(--paper);
+  border-radius: 18px;
+  border: 2px dashed var(--accent);
+  transition: all 0.2s ease;
+}
+
 .subtask-input-row {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -509,4 +534,124 @@ body {
   margin: 0;
   font-size: 0.85rem;
   color: var(--muted);
+}
+/* Task Modal Responsive Styling */
+.modal-dialog-content {
+  padding: 0;
+  max-width: min(420px, 95vw);
+  max-height: min(90vh, 95vh);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-dialog-content h3 {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive padding and spacing */
+@media (max-width: 640px) {
+  .modal-dialog-content {
+    max-width: 100%;
+    width: calc(100% - 1rem);
+    margin: 0.5rem;
+    max-height: calc(100vh - 2rem);
+  }
+
+  .modal-dialog-content h3 {
+    font-size: 1.1rem;
+  }
+
+  #taskForm label {
+    font-size: 0.85rem;
+  }
+
+  #taskForm input,
+  #taskForm textarea,
+  #taskForm select {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 8px 10px;
+  }
+
+  .subtask-input-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+
+  .subtask-input-row input {
+    min-width: 0;
+  }
+
+  .subtask-input-row button {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+}
+
+/* Zoom responsiveness */
+@media (max-width: 480px) {
+  .modal-dialog-content {
+    max-width: 100%;
+    width: calc(100vw - 1rem);
+  }
+
+  #taskForm {
+    gap: 2px;
+  }
+
+  #taskForm label {
+    gap: 4px;
+  }
+
+  .category-select,
+  .status-select {
+    font-size: 0.9rem;
+  }
+}
+
+/* Extra large zoom levels - ensures usability */
+@media (max-height: 600px) {
+  .modal-dialog-content {
+    max-height: calc(100vh - 1rem);
+  }
+
+  #taskForm {
+    gap: 2px;
+    padding: 12px 16px;
+  }
+
+  .subtask-input-row {
+    gap: 6px;
+  }
+
+  .modal-dialog-content h3 {
+    font-size: 1rem;
+  }
+
+  #taskForm label {
+    gap: 2px;
+    font-size: 0.8rem;
+  }
+
+  #taskForm input,
+  #taskForm textarea,
+  #taskForm select {
+    padding: 6px 8px;
+    font-size: 14px;
+  }
 }
