@@ -93,6 +93,110 @@ const CATEGORY_STYLES = {
   Other: { bg: "#e9d5ff", text: "#2a163f" },
 };
 
+const FILTERS_KEY = "todoFilters";
+
+// Filter state management
+const getActiveFilters = () => {
+  const raw = localStorage.getItem(FILTERS_KEY);
+  return raw ? JSON.parse(raw) : { dateRange: { from: '', to: '' }, categories: [], statuses: [], urgencies: [] };
+};
+
+const setFilters = (filterObj) => {
+  localStorage.setItem(FILTERS_KEY, JSON.stringify(filterObj));
+  // Update both views if they exist
+  if (document.getElementById('taskList')) {
+    renderTasks();
+  }
+  if (document.getElementById('pendingColumn')) {
+    renderBoard();
+  }
+};
+
+const clearFilters = () => {
+  localStorage.removeItem(FILTERS_KEY);
+  // Clear form inputs
+  const dateFromInput = document.getElementById('filterDateFrom');
+  const dateToInput = document.getElementById('filterDateTo');
+  const categoryCheckboxes = document.querySelectorAll('[name="filterCategory"]');
+  const statusCheckboxes = document.querySelectorAll('[name="filterStatus"]');
+  const urgencyCheckboxes = document.querySelectorAll('[name="filterUrgency"]');
+  
+  if (dateFromInput) dateFromInput.value = '';
+  if (dateToInput) dateToInput.value = '';
+  categoryCheckboxes.forEach(cb => cb.checked = false);
+  statusCheckboxes.forEach(cb => cb.checked = false);
+  urgencyCheckboxes.forEach(cb => cb.checked = false);
+  
+  // Re-render both views
+  if (document.getElementById('taskList')) {
+    renderTasks();
+  }
+  if (document.getElementById('pendingColumn')) {
+    renderBoard();
+  }
+};
+
+// Calculate urgency level based on due date
+const getTaskUrgency = (dueDate) => {
+  if (!dueDate) return null;
+  
+  const today = new Date(getToday());
+  const due = new Date(dueDate);
+  
+  // Normalize dates to compare only date part
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  
+  const diffTime = due - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) return 'Overdue';
+  if (diffDays === 0) return 'Today';
+  if (diffDays <= 7) return 'This Week';
+  return 'Later';
+};
+
+// Filter tasks based on active filters
+const getFilteredTasks = (tasks, filters) => {
+  if (!filters || (!filters.dateRange?.from && !filters.dateRange?.to && 
+      (!filters.categories || filters.categories.length === 0) &&
+      (!filters.statuses || filters.statuses.length === 0) &&
+      (!filters.urgencies || filters.urgencies.length === 0))) {
+    return tasks;
+  }
+
+  return tasks.filter(task => {
+    // Date range filter
+    if (filters.dateRange?.from || filters.dateRange?.to) {
+      if (!task.dueDate) return false;
+      const taskDate = new Date(task.dueDate).toISOString().split('T')[0];
+      if (filters.dateRange.from && taskDate < filters.dateRange.from) return false;
+      if (filters.dateRange.to && taskDate > filters.dateRange.to) return false;
+    }
+
+    // Category filter (OR logic - task needs at least one selected category)
+    if (filters.categories && filters.categories.length > 0) {
+      const hasCategory = filters.categories.some(cat => 
+        task.categories && task.categories.includes(cat)
+      );
+      if (!hasCategory) return false;
+    }
+
+    // Status filter (OR logic - task needs at least one selected status)
+    if (filters.statuses && filters.statuses.length > 0) {
+      if (!filters.statuses.includes(task.status)) return false;
+    }
+
+    // Urgency filter (OR logic - task needs at least one selected urgency)
+    if (filters.urgencies && filters.urgencies.length > 0) {
+      const taskUrgency = getTaskUrgency(task.dueDate);
+      if (!filters.urgencies.includes(taskUrgency)) return false;
+    }
+
+    return true;
+  });
+};
+
 const getToday = () => new Date().toISOString().split("T")[0];
 
 const loadTasks = () => {
@@ -360,9 +464,17 @@ const getSelectedCategories = () => {
 };
 
 const renderTasks = () => {
-  const tasks = loadTasks();
-  if (tasks.length === 0) {
+  const allTasks = loadTasks();
+  const filters = getActiveFilters();
+  const tasks = getFilteredTasks(allTasks, filters);
+  
+  if (allTasks.length === 0) {
     taskList.innerHTML = "<div class=\"empty\">No tasks yet. Add your first one.</div>";
+    return;
+  }
+  
+  if (tasks.length === 0) {
+    taskList.innerHTML = "<div class=\"empty\">No tasks match your filters.</div>";
     return;
   }
 
@@ -841,7 +953,10 @@ const renderBoardTask = (task) => {
 };
 
 const renderBoard = () => {
-  const tasks = loadTasks();
+  const allTasks = loadTasks();
+  const filters = getActiveFilters();
+  const tasks = getFilteredTasks(allTasks, filters);
+  
   const pending = tasks.filter(t => t.status === 'Pending');
   const inProgress = tasks.filter(t => t.status === 'In Progress');
   const done = tasks.filter(t => t.status === 'Done');
@@ -1248,7 +1363,113 @@ if (document.getElementById('taskList')) {
   });
 }
 
-// Export functionality
+// Filter functionality - applies to both views
+const setupFilterListeners = () => {
+  const toggleFilter = document.getElementById('toggleFilter');
+  const filterPanel = document.getElementById('filterPanel');
+  const applyFiltersBtn = document.getElementById('applyFilters');
+  const clearAllFiltersBtn = document.getElementById('clearAllFilters');
+  const closeFilterBtn = document.getElementById('closeFilter');
+  
+  // Populate filter panel with saved filters on load
+  populateFilterPanel();
+  
+  // Toggle filter panel visibility
+  if (toggleFilter) {
+    toggleFilter.addEventListener('click', () => {
+      if (filterPanel) {
+        filterPanel.classList.toggle('hidden');
+      }
+    });
+  }
+  
+  // Apply filters
+  if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener('click', () => {
+      const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+      const dateTo = document.getElementById('filterDateTo')?.value || '';
+      const categories = Array.from(document.querySelectorAll('[name="filterCategory"]:checked'))
+        .map(cb => cb.value);
+      const statuses = Array.from(document.querySelectorAll('[name="filterStatus"]:checked'))
+        .map(cb => cb.value);
+      const urgencies = Array.from(document.querySelectorAll('[name="filterUrgency"]:checked'))
+        .map(cb => cb.value);
+      
+      const filters = {
+        dateRange: { from: dateFrom, to: dateTo },
+        categories,
+        statuses,
+        urgencies,
+      };
+      
+      setFilters(filters);
+      
+      // Optionally close the panel after applying
+      if (filterPanel) {
+        filterPanel.classList.add('hidden');
+      }
+    });
+  }
+  
+  // Clear all filters
+  if (clearAllFiltersBtn) {
+    clearAllFiltersBtn.addEventListener('click', () => {
+      clearFilters();
+    });
+  }
+  
+  // Close filter panel
+  if (closeFilterBtn) {
+    closeFilterBtn.addEventListener('click', () => {
+      if (filterPanel) {
+        filterPanel.classList.add('hidden');
+      }
+    });
+  }
+};
+
+// Populate filter panel UI with saved filters
+const populateFilterPanel = () => {
+  const filters = getActiveFilters();
+  
+  // Set date inputs
+  const dateFromInput = document.getElementById('filterDateFrom');
+  const dateToInput = document.getElementById('filterDateTo');
+  if (dateFromInput && filters.dateRange?.from) {
+    dateFromInput.value = filters.dateRange.from;
+  }
+  if (dateToInput && filters.dateRange?.to) {
+    dateToInput.value = filters.dateRange.to;
+  }
+  
+  // Set category checkboxes
+  if (filters.categories && filters.categories.length > 0) {
+    filters.categories.forEach(cat => {
+      const checkbox = document.querySelector(`[name="filterCategory"][value="${cat}"]`);
+      if (checkbox) checkbox.checked = true;
+    });
+  }
+  
+  // Set status checkboxes
+  if (filters.statuses && filters.statuses.length > 0) {
+    filters.statuses.forEach(status => {
+      const checkbox = document.querySelector(`[name="filterStatus"][value="${status}"]`);
+      if (checkbox) checkbox.checked = true;
+    });
+  }
+  
+  // Set urgency checkboxes
+  if (filters.urgencies && filters.urgencies.length > 0) {
+    filters.urgencies.forEach(urgency => {
+      const checkbox = document.querySelector(`[name="filterUrgency"][value="${urgency}"]`);
+      if (checkbox) checkbox.checked = true;
+    });
+  }
+};
+
+// Initialize filter listeners on page load
+window.addEventListener('load', setupFilterListeners);
+
 const exportModal = document.getElementById("exportModal");
 const exportToggle = document.getElementById("exportToggle");
 const closeExportModal = document.getElementById("closeExportModal");
