@@ -601,7 +601,7 @@ const renderBoardTask = (task) => {
   const categoryMarkup = renderCategoryTags(task.categories);
   const subtaskMarkup = renderSubtaskChecklist(task.subtasks, task.id);
   return `
-    <div class="task board-task" data-id="${task.id}">
+    <div class="task board-task" data-id="${task.id}" draggable="true">
       <div class="task-title">
         <div>
           <h3>${task.title}</h3>
@@ -733,6 +733,64 @@ const clearDoneBoard = () => {
   renderBoard();
 };
 
+// Drag and Drop Functions
+let draggedTaskId = null;
+
+const handleDragStart = (event) => {
+  const card = event.target.closest('.board-task');
+  if (!card) return;
+  
+  draggedTaskId = card.dataset.id;
+  card.classList.add('dragging');
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/html', card.innerHTML);
+};
+
+const handleDragEnd = (event) => {
+  const card = event.target.closest('.board-task');
+  if (card) {
+    card.classList.remove('dragging');
+  }
+  draggedTaskId = null;
+};
+
+const handleDragOver = (event) => {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  const column = event.target.closest('[data-column]');
+  if (column) {
+    column.classList.add('drag-over');
+  }
+};
+
+const handleDragLeave = (event) => {
+  const column = event.target.closest('[data-column]');
+  if (column && !column.contains(event.relatedTarget)) {
+    column.classList.remove('drag-over');
+  }
+};
+
+const handleDrop = (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  const column = event.target.closest('[data-column]');
+  if (!column || !draggedTaskId) return;
+  
+  column.classList.remove('drag-over');
+  
+  const newStatus = column.dataset.column;
+  const tasks = loadTasks();
+  
+  const updated = tasks.map(task =>
+    task.id === draggedTaskId ? { ...task, status: newStatus } : task
+  );
+  
+  saveTasks(updated);
+  updateHistoryForToday(updated);
+  renderBoard();
+};
+
 const initBoard = () => {
   const tasks = loadTasks();
   updateHistoryForToday(tasks);
@@ -749,23 +807,27 @@ const initBoard = () => {
   const inProgressCol = document.getElementById('inProgressColumn');
   const doneCol = document.getElementById('doneColumn');
 
-  if (pendingCol) {
-    pendingCol.addEventListener('change', handleStatusChange);
-    pendingCol.addEventListener('change', handleSubtaskToggle);
-    pendingCol.addEventListener('click', handleBoardTaskClick);
-  }
-  
-  if (inProgressCol) {
-    inProgressCol.addEventListener('change', handleStatusChange);
-    inProgressCol.addEventListener('change', handleSubtaskToggle);
-    inProgressCol.addEventListener('click', handleBoardTaskClick);
-  }
-  
-  if (doneCol) {
-    doneCol.addEventListener('change', handleStatusChange);
-    doneCol.addEventListener('change', handleSubtaskToggle);
-    doneCol.addEventListener('click', handleBoardTaskClick);
-  }
+  // Setup drag and drop for all columns
+  const columns = [pendingCol, inProgressCol, doneCol];
+  columns.forEach(col => {
+    if (col) {
+      // Drag and drop events
+      col.addEventListener('dragstart', handleDragStart, true);
+      col.addEventListener('dragend', handleDragEnd, true);
+      
+      const colContainer = col.parentElement;
+      if (colContainer) {
+        colContainer.addEventListener('dragover', handleDragOver);
+        colContainer.addEventListener('dragleave', handleDragLeave);
+        colContainer.addEventListener('drop', handleDrop);
+      }
+      
+      // Other event listeners
+      col.addEventListener('change', handleStatusChange);
+      col.addEventListener('change', handleSubtaskToggle);
+      col.addEventListener('click', handleBoardTaskClick);
+    }
+  });
 };
 
 // Universal form submit handler that works for both views
