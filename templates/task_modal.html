@@ -1,34 +1,86 @@
-<div class="modal fixed inset-0 bg-[rgba(11,12,18,0.4)] hidden items-center justify-center p-6" id="taskModal" aria-hidden="true">
-  <div class="bg-white rounded-3xl p-6 w-full max-w-[420px] shadow-[0_24px_60px_rgba(17,18,25,0.2)]" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="flex justify-between items-center mb-4">
-      <h3 id="modalTitle" class="m-0">New task</h3>
-      <button class="border-none bg-white rounded-[10px] px-[10px] py-[6px] cursor-pointer shadow-[0_6px_12px_rgba(17,18,25,0.08)]" id="closeModal" aria-label="Close">×</button>
+<div class="modal fixed inset-0 bg-[rgba(11,12,18,0.4)] hidden items-center justify-center p-4 sm:p-6" id="taskModal" aria-hidden="true">
+  <div class="modal-dialog-content bg-[var(--card)] text-[var(--ink)] rounded-3xl w-full max-h-[90vh] max-w-[420px] shadow-[0_24px_60px_rgba(17,18,25,0.2)] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="flex justify-between items-center mb-4 flex-shrink-0 px-6 sm:px-6 pt-6 sm:pt-6">
+      <h3 id="modalTitle" class="m-0 text-lg sm:text-xl">New task</h3>
+      <button class="border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] rounded-[10px] px-[10px] py-[6px] cursor-pointer shadow-[0_6px_12px_rgba(17,18,25,0.08)]" id="closeModal" aria-label="Close">×</button>
     </div>
-    <form id="taskForm" class="grid gap-3">
+    <form id="taskForm" class="grid gap-3 overflow-y-auto px-6 sm:px-6 py-4 flex-1">
       <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
         Title
-        <input type="text" name="title" required class="border border-[#ece3d8] rounded-xl px-3 py-[10px] font-[inherit]" />
+        <input type="text" name="title" required class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]" />
       </label>
       <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
         Description
-        <textarea name="description" rows="3" class="border border-[#ece3d8] rounded-xl px-3 py-[10px] font-[inherit]"></textarea>
+        <textarea name="description" rows="3" class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]"></textarea>
       </label>
       <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
         Status
-        <select name="status" class="border border-[#ece3d8] rounded-xl px-3 py-[10px] font-[inherit]">
+        <select name="status" class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]">
           <option value="Pending">Pending</option>
           <option value="In Progress">In Progress</option>
           <option value="Done">Done</option>
         </select>
       </label>
       <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
-        Due date
-        <input type="date" name="dueDate" class="border border-[#ece3d8] rounded-xl px-3 py-[10px] font-[inherit]" />
+        Priority
+        <select name="priority" class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
       </label>
+      <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
+        Categories
+        <div class="grid gap-2">
+          <select id="categorySelect" class="category-select">
+            <option value="">Choose a category</option>
+          </select>
+          <div id="categoryPills" class="flex flex-wrap gap-2"></div>
+        </div>
+      </label>
+      <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
+        Due date
+        <input type="date" name="dueDate" class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]" />
+      </label>
+      <div class="grid gap-3 p-3 bg-[var(--surface)] rounded-xl border border-[var(--border)]">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="isRecurring" id="isRecurringCheckbox" class="w-4 h-4 cursor-pointer" />
+          <span class="text-[0.9rem] text-[var(--muted)]">Make this a recurring task</span>
+        </label>
+        <div id="recurrenceOptions" class="grid gap-3 hidden">
+          <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
+            Recurrence pattern
+            <select name="recurrencePattern" id="recurrencePattern" class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]">
+              <option value="">None</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </label>
+          <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
+            End date (optional)
+            <input type="date" name="recurrenceEndDate" class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]" />
+            <span class="text-[0.75rem] text-[var(--muted)]">Leave blank for no end date</span>
+          </label>
+          <div class="text-[0.85rem] text-[var(--muted)] bg-[var(--card)] p-2 rounded-lg border border-[var(--border)]" id="recurrencePreview">
+            Preview: No recurring pattern selected
+          </div>
+        </div>
+      </div>
+      <div class="grid gap-[8px] text-[0.9rem] text-[var(--muted)]">
+        <span>Sub-tasks</span>
+        <div id="subtaskList" class="subtask-list"></div>
+        <div class="subtask-input-row">
+          <input type="text" id="subtaskInput" placeholder="Add a sub-task" class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]" />
+          <button type="button" class="btn ghost px-4 py-2 rounded-full font-semibold text-[0.85rem] cursor-pointer transition-all duration-200 bg-[var(--card)] text-[var(--ink)] border border-[var(--border)] hover:-translate-y-0.5" id="addSubtask">Add</button>
+        </div>
+        <span class="text-[0.8rem] text-[var(--muted)]">Check off sub-tasks directly on the task card.</span>
+      </div>
       <input type="hidden" name="taskId" />
-      <div class="flex justify-end gap-3 mt-2">
-        <button type="button" class="btn ghost border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5" id="cancelModal">Cancel</button>
-        <button type="submit" class="btn primary border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(255,111,91,0.35)] hover:-translate-y-0.5">Save task</button>
+      <input type="hidden" name="categories" id="categoriesInput" />
+      <div class="flex justify-end gap-3 mt-2 flex-shrink-0 pb-6 sm:pb-6 px-0">
+        <button type="button" class="btn ghost px-4 sm:px-5 py-2 sm:py-3 rounded-full font-semibold text-sm sm:text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--card)] text-[var(--ink)] border border-[var(--border)] hover:-translate-y-0.5" id="cancelModal">Cancel</button>
+        <button type="submit" class="btn primary border-none px-4 sm:px-5 py-2 sm:py-3 rounded-full font-semibold text-sm sm:text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(255,111,91,0.35)] hover:-translate-y-0.5">Save task</button>
       </div>
     </form>
   </div>
