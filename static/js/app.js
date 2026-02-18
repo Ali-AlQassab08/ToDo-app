@@ -3,6 +3,8 @@ const HISTORY_KEY = "todoProgress";
 const THEME_KEY = "todoTheme";
 const FILTERS_KEY = "todoFilters";
 const SEARCH_KEY = "todoSearchQuery";
+const PROJECTS_KEY = "todoProjects";
+const CURRENT_PROJECT_KEY = "todoCurrentProject";
 
 const modal = document.getElementById("taskModal");
 const themeToggle = document.getElementById("themeToggle");
@@ -93,6 +95,105 @@ const CATEGORY_STYLES = {
   Finances: { bg: "#ffe4a3", text: "#3d2f00" },
   Workout: { bg: "#c9f2c7", text: "#1b3a1b" },
   Other: { bg: "#e9d5ff", text: "#2a163f" },
+};
+
+// ==================== Project Management ====================
+
+const loadProjects = () => {
+  const raw = localStorage.getItem(PROJECTS_KEY);
+  if (!raw) {
+    // Initialize with default project if none exist
+    const defaultProjects = [
+      { id: crypto.randomUUID(), name: "All Tasks", isDefault: true }
+    ];
+    localStorage.setItem(PROJECTS_KEY, JSON.stringify(defaultProjects));
+    return defaultProjects;
+  }
+  return JSON.parse(raw);
+};
+
+const saveProjects = (projects) => {
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+};
+
+const getCurrentProjectId = () => {
+  const projects = loadProjects();
+  const stored = localStorage.getItem(CURRENT_PROJECT_KEY);
+  if (stored && projects.some(p => p.id === stored)) {
+    return stored;
+  }
+  // Return default project if nothing stored
+  const defaultProject = projects.find(p => p.isDefault);
+  if (defaultProject) {
+    localStorage.setItem(CURRENT_PROJECT_KEY, defaultProject.id);
+    return defaultProject.id;
+  }
+  // Or first project
+  if (projects.length > 0) {
+    localStorage.setItem(CURRENT_PROJECT_KEY, projects[0].id);
+    return projects[0].id;
+  }
+  return null;
+};
+
+const setCurrentProjectId = (projectId) => {
+  localStorage.setItem(CURRENT_PROJECT_KEY, projectId);
+};
+
+const getCurrentProject = () => {
+  const projects = loadProjects();
+  const projectId = getCurrentProjectId();
+  return projects.find(p => p.id === projectId);
+};
+
+const createProject = (name) => {
+  const projects = loadProjects();
+  const newProject = {
+    id: crypto.randomUUID(),
+    name: name.trim() || "New Project",
+    isDefault: false
+  };
+  projects.push(newProject);
+  saveProjects(projects);
+  return newProject;
+};
+
+const deleteProject = (projectId) => {
+  let projects = loadProjects();
+  // Don't delete default project
+  const projectToDelete = projects.find(p => p.id === projectId);
+  if (projectToDelete && projectToDelete.isDefault) {
+    return false;
+  }
+  projects = projects.filter(p => p.id !== projectId);
+  saveProjects(projects);
+  
+  // Delete all tasks in this project
+  let allTasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
+  allTasks = allTasks.filter(t => t.projectId !== projectId);
+  localStorage.setItem(TASKS_KEY, JSON.stringify(allTasks));
+  
+  // Switch to default project if deleted project was current
+  if (getCurrentProjectId() === projectId) {
+    const defaultProject = projects.find(p => p.isDefault);
+    if (defaultProject) {
+      setCurrentProjectId(defaultProject.id);
+    } else if (projects.length > 0) {
+      setCurrentProjectId(projects[0].id);
+    }
+  }
+  return true;
+};
+
+const renameProject = (projectId, newName) => {
+  const projects = loadProjects();
+  const project = projects.find(p => p.id === projectId);
+  if (project) {
+    project.name = newName.trim() || "Untitled Project";
+    saveProjects(projects);
+    return true;
+  }
+  return false;
 };
 
 // Filter state management
@@ -251,11 +352,67 @@ const getToday = () => new Date().toISOString().split("T")[0];
 
 const loadTasks = () => {
   const raw = localStorage.getItem(TASKS_KEY);
-  return raw ? JSON.parse(raw) : [];
+  const tasks = raw ? JSON.parse(raw) : [];
+  
+  // Apply migration to ensure all tasks have projectId
+  const migratedTasks = migrateTasksIfNeeded(tasks);
+  
+  // Save if migration occurred
+  if (migratedTasks !== tasks && migratedTasks.length > 0) {
+    saveTasks(migratedTasks);
+  }
+  
+  return migratedTasks;
+};
+
+const migrateTasksIfNeeded = (tasks) => {
+  if (!tasks || tasks.length === 0) return tasks;
+  
+  // Check if any task is missing projectId
+  const needsMigration = tasks.some(task => !task.projectId);
+  
+  if (!needsMigration) return tasks;
+  
+  // Get default project
+  const projects = loadProjects();
+  const defaultProject = projects.find(p => p.isDefault);
+  const defaultProjectId = defaultProject ? defaultProject.id : null;
+  
+  if (!defaultProjectId) return tasks;
+  
+  // Migrate tasks
+  return tasks.map(task => {
+    if (!task.projectId) {
+      return { ...task, projectId: defaultProjectId };
+    }
+    return task;
+  });
 };
 
 const saveTasks = (tasks) => {
   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+};
+
+const migrateTasks = (tasks) => {
+  // Ensure all tasks have a projectId, assigning them to the default project if missing
+  const projects = loadProjects();
+  const defaultProject = projects.find(p => p.isDefault);
+  const defaultProjectId = defaultProject ? defaultProject.id : null;
+  
+  if (!defaultProjectId) return tasks;
+  
+  return tasks.map(task => {
+    if (!task.projectId) {
+      return { ...task, projectId: defaultProjectId };
+    }
+    return task;
+  });
+};
+
+const getProjectTasks = () => {
+  const allTasks = loadTasks(); // loadTasks already applies migration
+  const projectId = getCurrentProjectId();
+  return allTasks.filter(task => task.projectId === projectId);
 };
 
 const loadHistory = () => {
@@ -270,8 +427,11 @@ const saveHistory = (history) => {
 const updateHistoryForToday = (tasks) => {
   const history = loadHistory();
   const today = getToday();
-  const total = tasks.length;
-  const completed = tasks.filter((task) => task.status === "Done").length;
+  // Filter tasks for the current project
+  const projectId = getCurrentProjectId();
+  const projectTasks = tasks.filter(t => t.projectId === projectId);
+  const total = projectTasks.length;
+  const completed = projectTasks.filter((task) => task.status === "Done").length;
   history[today] = {
     date: today,
     completed,
@@ -389,6 +549,7 @@ const createRecurringTaskInstance = (parentTask) => {
     description: parentTask.description,
     status: "Pending",
     priority: parentTask.priority || 'medium',
+    projectId: parentTask.projectId,
     dueDate: nextDueDate,
     categories: [...parentTask.categories],
     subtasks: parentTask.subtasks.map(st => ({
@@ -515,12 +676,12 @@ const getSelectedCategories = () => {
 };
 
 const renderTasks = () => {
-  const allTasks = loadTasks();
+  const projectTasks = getProjectTasks();
   const filters = getActiveFilters();
   const searchQuery = getActiveSearchQuery();
-  const tasks = getFilteredTasks(allTasks, filters, searchQuery);
+  const tasks = getFilteredTasks(projectTasks, filters, searchQuery);
   
-  if (allTasks.length === 0) {
+  if (projectTasks.length === 0) {
     taskList.innerHTML = "<div class=\"empty\">No tasks yet. Add your first one.</div>";
     return;
   }
@@ -649,6 +810,125 @@ const renderChart = () => {
       },
     },
   });
+};
+
+// ==================== Projects UI Rendering ====================
+
+const renderProjects = () => {
+  const projects = loadProjects();
+  const currentProjectId = getCurrentProjectId();
+  const projectsList = document.getElementById('projectsList');
+  
+  if (!projectsList) return;
+  
+  projectsList.innerHTML = projects.map(project => {
+    const isActive = project.id === currentProjectId;
+    return `
+      <div class="project-item ${isActive ? 'active' : ''}" data-project-id="${project.id}">
+        <span class="project-name">${project.name}</span>
+        <div class="project-actions">
+          ${!project.isDefault ? `
+            <button class="project-action-btn delete-project" title="Delete project">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+};
+
+const handleProjectSelect = (projectId) => {
+  setCurrentProjectId(projectId);
+  renderProjects();
+  
+  // Refresh the current view
+  if (document.getElementById('taskList')) {
+    renderTasks();
+    renderStreak();
+    renderChart();
+  } else if (document.getElementById('pendingColumn')) {
+    renderBoard();
+  }
+};
+
+const handleDeleteProject = (projectId) => {
+  const projects = loadProjects();
+  const project = projects.find(p => p.id === projectId);
+  
+  if (!project || project.isDefault) {
+    return;
+  }
+  
+  if (confirm(`Delete project "${project.name}" and all its tasks?`)) {
+    deleteProject(projectId);
+    renderProjects();
+    
+    // Refresh the current view
+    if (document.getElementById('taskList')) {
+      renderTasks();
+      renderStreak();
+    } else if (document.getElementById('pendingColumn')) {
+      renderBoard();
+    }
+  }
+};
+
+const openProjectModal = (projectId = null) => {
+  const projectModal = document.getElementById('projectModal');
+  const projectForm = document.getElementById('projectForm');
+  const projectModalTitle = document.getElementById('projectModalTitle');
+  
+  if (!projectModal || !projectForm) return;
+  
+  if (projectId) {
+    const projects = loadProjects();
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      projectModalTitle.textContent = 'Edit Project';
+      projectForm.projectName.value = project.name;
+      projectForm.projectId.value = project.id;
+    }
+  } else {
+    projectModalTitle.textContent = 'New Project';
+    projectForm.reset();
+    projectForm.projectId.value = '';
+  }
+  
+  projectModal.classList.add('show');
+  projectModal.setAttribute('aria-hidden', 'false');
+  projectForm.projectName.focus();
+};
+
+const closeProjectModal = () => {
+  const projectModal = document.getElementById('projectModal');
+  if (projectModal) {
+    projectModal.classList.remove('show');
+    projectModal.setAttribute('aria-hidden', 'true');
+  }
+};
+
+const handleProjectFormSubmit = (event) => {
+  event.preventDefault();
+  const projectForm = document.getElementById('projectForm');
+  const projectId = projectForm.projectId.value;
+  const projectName = projectForm.projectName.value.trim();
+  
+  if (!projectName) return;
+  
+  if (projectId) {
+    // Edit existing project
+    renameProject(projectId, projectName);
+  } else {
+    // Create new project
+    createProject(projectName);
+  }
+  
+  renderProjects();
+  closeProjectModal();
 };
 
 const updateRecurrencePreview = () => {
@@ -1034,10 +1314,10 @@ const renderBoardTask = (task) => {
 };
 
 const renderBoard = () => {
-  const allTasks = loadTasks();
+  const projectTasks = getProjectTasks();
   const filters = getActiveFilters();
   const searchQuery = getActiveSearchQuery();
-  const tasks = getFilteredTasks(allTasks, filters, searchQuery);
+  const tasks = getFilteredTasks(projectTasks, filters, searchQuery);
   
   const pending = tasks.filter(t => t.status === 'Pending');
   const inProgress = tasks.filter(t => t.status === 'In Progress');
@@ -1284,6 +1564,7 @@ const handleUniversalFormSubmit = (event) => {
     status: taskForm.status.value,
     priority: taskForm.priority.value || 'medium',
     dueDate: taskForm.dueDate.value,
+    projectId: existingTask ? existingTask.projectId : getCurrentProjectId(),
     categories: getSelectedCategories(),
     subtasks: getSubtasksFromEditor(),
     isRecurring: isRecurring && recurrencePatternValue ? true : false,
@@ -1384,6 +1665,45 @@ if (document.getElementById('taskList')) {
     if (recurrencePattern) {
       recurrencePattern.addEventListener("change", handleRecurrencePatternChange);
     }
+    
+    // Set up project management event listeners
+    renderProjects();
+    const projectsList = document.getElementById('projectsList');
+    if (projectsList) {
+      projectsList.addEventListener('click', (event) => {
+        const projectItem = event.target.closest('.project-item');
+        if (!projectItem) return;
+        const deleteBtn = event.target.closest('.delete-project');
+        const projectId = projectItem.dataset.projectId;
+        if (deleteBtn) {
+          handleDeleteProject(projectId);
+        } else {
+          handleProjectSelect(projectId);
+        }
+      });
+    }
+    const addProjectBtn = document.getElementById('addProjectBtn');
+    if (addProjectBtn) {
+      addProjectBtn.addEventListener('click', () => openProjectModal());
+    }
+    const closeProjectModalBtn = document.getElementById('closeProjectModal');
+    if (closeProjectModalBtn) {
+      closeProjectModalBtn.addEventListener('click', closeProjectModal);
+    }
+    const cancelProjectModalBtn = document.getElementById('cancelProjectModal');
+    if (cancelProjectModalBtn) {
+      cancelProjectModalBtn.addEventListener('click', closeProjectModal);
+    }
+    const projectModal = document.getElementById('projectModal');
+    if (projectModal) {
+      projectModal.addEventListener('click', (event) => {
+        if (event.target === projectModal) closeProjectModal();
+      });
+    }
+    const projectForm = document.getElementById('projectForm');
+    if (projectForm) {
+      projectForm.addEventListener('submit', handleProjectFormSubmit);
+    }
   });
 } else if (document.getElementById('pendingColumn')) {
   // Board view initialization
@@ -1442,6 +1762,45 @@ if (document.getElementById('taskList')) {
     }
     if (recurrencePattern) {
       recurrencePattern.addEventListener("change", handleRecurrencePatternChange);
+    }
+    
+    // Set up project management event listeners
+    renderProjects();
+    const projectsList = document.getElementById('projectsList');
+    if (projectsList) {
+      projectsList.addEventListener('click', (event) => {
+        const projectItem = event.target.closest('.project-item');
+        if (!projectItem) return;
+        const deleteBtn = event.target.closest('.delete-project');
+        const projectId = projectItem.dataset.projectId;
+        if (deleteBtn) {
+          handleDeleteProject(projectId);
+        } else {
+          handleProjectSelect(projectId);
+        }
+      });
+    }
+    const addProjectBtn = document.getElementById('addProjectBtn');
+    if (addProjectBtn) {
+      addProjectBtn.addEventListener('click', () => openProjectModal());
+    }
+    const closeProjectModalBtn = document.getElementById('closeProjectModal');
+    if (closeProjectModalBtn) {
+      closeProjectModalBtn.addEventListener('click', closeProjectModal);
+    }
+    const cancelProjectModalBtn = document.getElementById('cancelProjectModal');
+    if (cancelProjectModalBtn) {
+      cancelProjectModalBtn.addEventListener('click', closeProjectModal);
+    }
+    const projectModal = document.getElementById('projectModal');
+    if (projectModal) {
+      projectModal.addEventListener('click', (event) => {
+        if (event.target === projectModal) closeProjectModal();
+      });
+    }
+    const projectForm = document.getElementById('projectForm');
+    if (projectForm) {
+      projectForm.addEventListener('submit', handleProjectFormSubmit);
     }
   });
 }
