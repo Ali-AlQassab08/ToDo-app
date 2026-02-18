@@ -388,6 +388,7 @@ const createRecurringTaskInstance = (parentTask) => {
     title: parentTask.title,
     description: parentTask.description,
     status: "Pending",
+    priority: parentTask.priority || 'medium',
     dueDate: nextDueDate,
     categories: [...parentTask.categories],
     subtasks: parentTask.subtasks.map(st => ({
@@ -543,12 +544,26 @@ const renderTasks = () => {
            ${getRecurrenceDisplay(task.recurrencePattern)}
          </span>` 
         : "";
+      
+      const priorityClass = task.priority || 'medium';
+      const priorityDisplay = {
+        'high': 'High Priority',
+        'medium': 'Medium Priority',
+        'low': 'Low Priority'
+      }[priorityClass] || 'Medium Priority';
+      
+      const priorityMarkup = `<span class="priority-badge priority-${priorityClass}" style="display: inline-flex; margin-right: 8px;">
+        <span class="priority-indicator"></span>
+        ${priorityDisplay}
+      </span>`;
+      
       return `
-      <div class="task" data-id="${task.id}" ${task.isRecurring ? 'data-recurring="true"' : ''}>
+      <div class="task" data-id="${task.id}" data-priority="${priorityClass}" ${task.isRecurring ? 'data-recurring="true"' : ''}>
         <div class="task-title">
           <div>
             <h3>${task.title}</h3>
             <p>${task.description || ""}</p>
+            ${priorityMarkup}
             ${recurrenceMarkup}
             ${categoryMarkup}
             ${subtaskMarkup}
@@ -667,6 +682,7 @@ const openModal = (task) => {
   taskForm.title.value = task ? task.title : "";
   taskForm.description.value = task ? task.description : "";
   taskForm.status.value = task ? task.status : "Pending";
+  taskForm.priority.value = task && task.priority ? task.priority : "medium";
   taskForm.dueDate.value = task && task.dueDate ? task.dueDate : "";
   if (categorySelect) {
     categorySelect.value = "";
@@ -966,13 +982,27 @@ const renderBoardTask = (task) => {
        ${getRecurrenceDisplay(task.recurrencePattern)}
      </span>` 
     : "";
+  
+  const priorityClass = task.priority || 'medium';
+  const priorityDisplay = {
+    'high': 'High Priority',
+    'medium': 'Medium Priority',
+    'low': 'Low Priority'
+  }[priorityClass] || 'Medium Priority';
+  
+  const priorityMarkup = `<span class="priority-badge priority-${priorityClass}" style="margin-bottom: 0.5rem; display: inline-flex;">
+    <span class="priority-indicator"></span>
+    ${priorityDisplay}
+  </span>`;
+  
   return `
-    <div class="task board-task" data-id="${task.id}" draggable="true" ${task.isRecurring ? 'data-recurring="true"' : ''}>
+    <div class="task board-task" data-id="${task.id}" data-priority="${priorityClass}" draggable="true" style="position: relative;" ${task.isRecurring ? 'data-recurring="true"' : ''}>
       <div class="task-title">
         <div>
           <h3>${task.title}</h3>
           ${task.description ? `<p class="text-sm text-[var(--muted)] mt-1">${task.description}</p>` : ''}
           <div style="margin-bottom: 0.5rem;">${recurrenceMarkup}</div>
+          ${priorityMarkup}
           ${categoryMarkup}
           ${subtaskMarkup}
         </div>
@@ -1252,6 +1282,7 @@ const handleUniversalFormSubmit = (event) => {
     title: taskForm.title.value.trim(),
     description: taskForm.description.value.trim(),
     status: taskForm.status.value,
+    priority: taskForm.priority.value || 'medium',
     dueDate: taskForm.dueDate.value,
     categories: getSelectedCategories(),
     subtasks: getSubtasksFromEditor(),
