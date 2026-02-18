@@ -948,3 +948,17 @@ body {
 .project-item.active .project-action-btn:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* Copyright Footer */
+.copyright-footer {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  margin-top: 3rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.copyright-footer p {
+  margin: 0;
+}
