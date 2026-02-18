@@ -1,0 +1,37 @@
+<!-- Projects Panel -->
+<div class="projects-panel">
+  <div class="projects-header">
+    <h3 class="projects-title">Projects</h3>
+    <button class="btn ghost icon-btn" id="addProjectBtn" title="Create new project">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+  </div>
+  
+  <div id="projectsList" class="projects-list">
+    <!-- Projects will be rendered here -->
+  </div>
+</div>
+
+<!-- Project Creation/Editing Modal -->
+<div class="modal fixed inset-0 bg-[rgba(11,12,18,0.4)] hidden items-center justify-center p-4 sm:p-6" id="projectModal" aria-hidden="true">
+  <div class="modal-dialog-content bg-[var(--card)] text-[var(--ink)] rounded-3xl w-full max-h-[90vh] max-w-[420px] shadow-[0_24px_60px_rgba(17,18,25,0.2)] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="projectModalTitle">
+    <div class="flex justify-between items-center mb-4 flex-shrink-0 px-6 sm:px-6 pt-6 sm:pt-6">
+      <h3 id="projectModalTitle" class="m-0 text-lg sm:text-xl">New Project</h3>
+      <button class="border border-[var(--border)] bg-[var(--surface)] text-[var(--ink)] rounded-[10px] px-[10px] py-[6px] cursor-pointer shadow-[0_6px_12px_rgba(17,18,25,0.08)]" id="closeProjectModal" aria-label="Close">×</button>
+    </div>
+    <form id="projectForm" class="grid gap-3 overflow-y-auto px-6 sm:px-6 py-4 flex-1">
+      <label class="grid gap-[6px] text-[0.9rem] text-[var(--muted)]">
+        Project Name
+        <input type="text" name="projectName" required class="border border-[var(--border)] bg-[var(--card)] text-[var(--ink)] rounded-xl px-3 py-[10px] font-[inherit]" placeholder="Enter project name" />
+      </label>
+      <input type="hidden" name="projectId" />
+      <div class="flex justify-end gap-3 mt-2 flex-shrink-0 pb-6 sm:pb-6 px-0">
+        <button type="button" class="btn ghost px-4 sm:px-5 py-2 sm:py-3 rounded-full font-semibold text-sm sm:text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--card)] text-[var(--ink)] border border-[var(--border)] hover:-translate-y-0.5" id="cancelProjectModal">Cancel</button>
+        <button type="submit" class="btn primary border-none px-4 sm:px-5 py-2 sm:py-3 rounded-full font-semibold text-sm sm:text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(255,111,91,0.35)] hover:-translate-y-0.5">Save Project</button>
+      </div>
+    </form>
+  </div>
+</div>
