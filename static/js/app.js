@@ -1,6 +1,10 @@
 const TASKS_KEY = "todoTasks";
 const HISTORY_KEY = "todoProgress";
 const THEME_KEY = "todoTheme";
+const FILTERS_KEY = "todoFilters";
+const SEARCH_KEY = "todoSearchQuery";
+const PROJECTS_KEY = "todoProjects";
+const CURRENT_PROJECT_KEY = "todoCurrentProject";
 
 const modal = document.getElementById("taskModal");
 const themeToggle = document.getElementById("themeToggle");
@@ -93,15 +97,322 @@ const CATEGORY_STYLES = {
   Other: { bg: "#e9d5ff", text: "#2a163f" },
 };
 
+// ==================== Project Management ====================
+
+const loadProjects = () => {
+  const raw = localStorage.getItem(PROJECTS_KEY);
+  if (!raw) {
+    // Initialize with default project if none exist
+    const defaultProjects = [
+      { id: crypto.randomUUID(), name: "All Tasks", isDefault: true }
+    ];
+    localStorage.setItem(PROJECTS_KEY, JSON.stringify(defaultProjects));
+    return defaultProjects;
+  }
+  return JSON.parse(raw);
+};
+
+const saveProjects = (projects) => {
+  localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
+};
+
+const getCurrentProjectId = () => {
+  const projects = loadProjects();
+  const stored = localStorage.getItem(CURRENT_PROJECT_KEY);
+  if (stored && projects.some(p => p.id === stored)) {
+    return stored;
+  }
+  // Return default project if nothing stored
+  const defaultProject = projects.find(p => p.isDefault);
+  if (defaultProject) {
+    localStorage.setItem(CURRENT_PROJECT_KEY, defaultProject.id);
+    return defaultProject.id;
+  }
+  // Or first project
+  if (projects.length > 0) {
+    localStorage.setItem(CURRENT_PROJECT_KEY, projects[0].id);
+    return projects[0].id;
+  }
+  return null;
+};
+
+const setCurrentProjectId = (projectId) => {
+  localStorage.setItem(CURRENT_PROJECT_KEY, projectId);
+};
+
+const getCurrentProject = () => {
+  const projects = loadProjects();
+  const projectId = getCurrentProjectId();
+  return projects.find(p => p.id === projectId);
+};
+
+const createProject = (name) => {
+  const projects = loadProjects();
+  const newProject = {
+    id: crypto.randomUUID(),
+    name: name.trim() || "New Project",
+    isDefault: false
+  };
+  projects.push(newProject);
+  saveProjects(projects);
+  return newProject;
+};
+
+const deleteProject = (projectId) => {
+  let projects = loadProjects();
+  // Don't delete default project
+  const projectToDelete = projects.find(p => p.id === projectId);
+  if (projectToDelete && projectToDelete.isDefault) {
+    return false;
+  }
+  projects = projects.filter(p => p.id !== projectId);
+  saveProjects(projects);
+  
+  // Delete all tasks in this project
+  let allTasks = JSON.parse(localStorage.getItem(TASKS_KEY) || '[]');
+  allTasks = allTasks.filter(t => t.projectId !== projectId);
+  localStorage.setItem(TASKS_KEY, JSON.stringify(allTasks));
+  
+  // Switch to default project if deleted project was current
+  if (getCurrentProjectId() === projectId) {
+    const defaultProject = projects.find(p => p.isDefault);
+    if (defaultProject) {
+      setCurrentProjectId(defaultProject.id);
+    } else if (projects.length > 0) {
+      setCurrentProjectId(projects[0].id);
+    }
+  }
+  return true;
+};
+
+const renameProject = (projectId, newName) => {
+  const projects = loadProjects();
+  const project = projects.find(p => p.id === projectId);
+  if (project) {
+    project.name = newName.trim() || "Untitled Project";
+    saveProjects(projects);
+    return true;
+  }
+  return false;
+};
+
+// Filter state management
+const getActiveFilters = () => {
+  const raw = localStorage.getItem(FILTERS_KEY);
+  return raw ? JSON.parse(raw) : { dateRange: { from: '', to: '' }, categories: [], statuses: [], urgencies: [] };
+};
+
+const getActiveSearchQuery = () => {
+  return localStorage.getItem(SEARCH_KEY) || '';
+};
+
+const setSearchQuery = (query) => {
+  if (query && query.trim()) {
+    localStorage.setItem(SEARCH_KEY, query.trim());
+  } else {
+    localStorage.removeItem(SEARCH_KEY);
+  }
+};
+
+// Full-text search across task title, description, and subtasks
+const searchTasks = (tasks, query) => {
+  if (!query || !query.trim()) {
+    return tasks;
+  }
+
+  const lowerQuery = query.toLowerCase().trim();
+  return tasks.filter(task => {
+    // Search in title
+    if (task.title && task.title.toLowerCase().includes(lowerQuery)) {
+      return true;
+    }
+
+    // Search in description
+    if (task.description && task.description.toLowerCase().includes(lowerQuery)) {
+      return true;
+    }
+
+    // Search in subtasks
+    if (task.subtasks && Array.isArray(task.subtasks)) {
+      const hasMatchingSubtask = task.subtasks.some(subtask =>
+        subtask.text && subtask.text.toLowerCase().includes(lowerQuery)
+      );
+      if (hasMatchingSubtask) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+};
+
+const setFilters = (filterObj) => {
+  localStorage.setItem(FILTERS_KEY, JSON.stringify(filterObj));
+  // Update both views if they exist
+  if (document.getElementById('taskList')) {
+    renderTasks();
+  }
+  if (document.getElementById('pendingColumn')) {
+    renderBoard();
+  }
+};
+
+const clearFilters = () => {
+  localStorage.removeItem(FILTERS_KEY);
+  // Clear form inputs
+  const dateFromInput = document.getElementById('filterDateFrom');
+  const dateToInput = document.getElementById('filterDateTo');
+  const categoryCheckboxes = document.querySelectorAll('[name="filterCategory"]');
+  const statusCheckboxes = document.querySelectorAll('[name="filterStatus"]');
+  const urgencyCheckboxes = document.querySelectorAll('[name="filterUrgency"]');
+  
+  if (dateFromInput) dateFromInput.value = '';
+  if (dateToInput) dateToInput.value = '';
+  categoryCheckboxes.forEach(cb => cb.checked = false);
+  statusCheckboxes.forEach(cb => cb.checked = false);
+  urgencyCheckboxes.forEach(cb => cb.checked = false);
+  
+  // Re-render both views
+  if (document.getElementById('taskList')) {
+    renderTasks();
+  }
+  if (document.getElementById('pendingColumn')) {
+    renderBoard();
+  }
+};
+
+// Calculate urgency level based on due date
+const getTaskUrgency = (dueDate) => {
+  if (!dueDate) return null;
+  
+  const today = new Date(getToday());
+  const due = new Date(dueDate);
+  
+  // Normalize dates to compare only date part
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  
+  const diffTime = due - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays < 0) return 'Overdue';
+  if (diffDays === 0) return 'Today';
+  if (diffDays <= 7) return 'This Week';
+  return 'Later';
+};
+
+// Filter tasks based on active filters and search query
+const getFilteredTasks = (tasks, filters, searchQuery) => {
+  // Convert searchQuery to empty string if undefined
+  const query = searchQuery || getActiveSearchQuery();
+  
+  // First apply categorical filters
+  let filtered = tasks;
+  if (filters && (filters.dateRange?.from || filters.dateRange?.to || 
+      (filters.categories && filters.categories.length > 0) ||
+      (filters.statuses && filters.statuses.length > 0) ||
+      (filters.urgencies && filters.urgencies.length > 0))) {
+    filtered = tasks.filter(task => {
+      // Date range filter
+      if (filters.dateRange?.from || filters.dateRange?.to) {
+        if (!task.dueDate) return false;
+        const taskDate = new Date(task.dueDate).toISOString().split('T')[0];
+        if (filters.dateRange.from && taskDate < filters.dateRange.from) return false;
+        if (filters.dateRange.to && taskDate > filters.dateRange.to) return false;
+      }
+
+      // Category filter (OR logic - task needs at least one selected category)
+      if (filters.categories && filters.categories.length > 0) {
+        const hasCategory = filters.categories.some(cat => 
+          task.categories && task.categories.includes(cat)
+        );
+        if (!hasCategory) return false;
+      }
+
+      // Status filter (OR logic - task needs at least one selected status)
+      if (filters.statuses && filters.statuses.length > 0) {
+        if (!filters.statuses.includes(task.status)) return false;
+      }
+
+      // Urgency filter (OR logic - task needs at least one selected urgency)
+      if (filters.urgencies && filters.urgencies.length > 0) {
+        const taskUrgency = getTaskUrgency(task.dueDate);
+        if (!filters.urgencies.includes(taskUrgency)) return false;
+      }
+
+      return true;
+    });
+  }
+
+  // Then apply text search (AND logic - must match both filters and search)
+  return searchTasks(filtered, query);
+};
+
 const getToday = () => new Date().toISOString().split("T")[0];
 
 const loadTasks = () => {
   const raw = localStorage.getItem(TASKS_KEY);
-  return raw ? JSON.parse(raw) : [];
+  const tasks = raw ? JSON.parse(raw) : [];
+  
+  // Apply migration to ensure all tasks have projectId
+  const migratedTasks = migrateTasksIfNeeded(tasks);
+  
+  // Save if migration occurred
+  if (migratedTasks !== tasks && migratedTasks.length > 0) {
+    saveTasks(migratedTasks);
+  }
+  
+  return migratedTasks;
+};
+
+const migrateTasksIfNeeded = (tasks) => {
+  if (!tasks || tasks.length === 0) return tasks;
+  
+  // Check if any task is missing projectId
+  const needsMigration = tasks.some(task => !task.projectId);
+  
+  if (!needsMigration) return tasks;
+  
+  // Get default project
+  const projects = loadProjects();
+  const defaultProject = projects.find(p => p.isDefault);
+  const defaultProjectId = defaultProject ? defaultProject.id : null;
+  
+  if (!defaultProjectId) return tasks;
+  
+  // Migrate tasks
+  return tasks.map(task => {
+    if (!task.projectId) {
+      return { ...task, projectId: defaultProjectId };
+    }
+    return task;
+  });
 };
 
 const saveTasks = (tasks) => {
   localStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
+};
+
+const migrateTasks = (tasks) => {
+  // Ensure all tasks have a projectId, assigning them to the default project if missing
+  const projects = loadProjects();
+  const defaultProject = projects.find(p => p.isDefault);
+  const defaultProjectId = defaultProject ? defaultProject.id : null;
+  
+  if (!defaultProjectId) return tasks;
+  
+  return tasks.map(task => {
+    if (!task.projectId) {
+      return { ...task, projectId: defaultProjectId };
+    }
+    return task;
+  });
+};
+
+const getProjectTasks = () => {
+  const allTasks = loadTasks(); // loadTasks already applies migration
+  const projectId = getCurrentProjectId();
+  return allTasks.filter(task => task.projectId === projectId);
 };
 
 const loadHistory = () => {
@@ -116,8 +427,11 @@ const saveHistory = (history) => {
 const updateHistoryForToday = (tasks) => {
   const history = loadHistory();
   const today = getToday();
-  const total = tasks.length;
-  const completed = tasks.filter((task) => task.status === "Done").length;
+  // Filter tasks for the current project
+  const projectId = getCurrentProjectId();
+  const projectTasks = tasks.filter(t => t.projectId === projectId);
+  const total = projectTasks.length;
+  const completed = projectTasks.filter((task) => task.status === "Done").length;
   history[today] = {
     date: today,
     completed,
@@ -234,6 +548,8 @@ const createRecurringTaskInstance = (parentTask) => {
     title: parentTask.title,
     description: parentTask.description,
     status: "Pending",
+    priority: parentTask.priority || 'medium',
+    projectId: parentTask.projectId,
     dueDate: nextDueDate,
     categories: [...parentTask.categories],
     subtasks: parentTask.subtasks.map(st => ({
@@ -360,9 +676,18 @@ const getSelectedCategories = () => {
 };
 
 const renderTasks = () => {
-  const tasks = loadTasks();
-  if (tasks.length === 0) {
+  const projectTasks = getProjectTasks();
+  const filters = getActiveFilters();
+  const searchQuery = getActiveSearchQuery();
+  const tasks = getFilteredTasks(projectTasks, filters, searchQuery);
+  
+  if (projectTasks.length === 0) {
     taskList.innerHTML = "<div class=\"empty\">No tasks yet. Add your first one.</div>";
+    return;
+  }
+  
+  if (tasks.length === 0) {
+    taskList.innerHTML = "<div class=\"empty\">No tasks match your filters.</div>";
     return;
   }
 
@@ -380,12 +705,26 @@ const renderTasks = () => {
            ${getRecurrenceDisplay(task.recurrencePattern)}
          </span>` 
         : "";
+      
+      const priorityClass = task.priority || 'medium';
+      const priorityDisplay = {
+        'high': 'High Priority',
+        'medium': 'Medium Priority',
+        'low': 'Low Priority'
+      }[priorityClass] || 'Medium Priority';
+      
+      const priorityMarkup = `<span class="priority-badge priority-${priorityClass}" style="display: inline-flex; margin-right: 8px;">
+        <span class="priority-indicator"></span>
+        ${priorityDisplay}
+      </span>`;
+      
       return `
-      <div class="task" data-id="${task.id}" ${task.isRecurring ? 'data-recurring="true"' : ''}>
+      <div class="task" data-id="${task.id}" data-priority="${priorityClass}" ${task.isRecurring ? 'data-recurring="true"' : ''}>
         <div class="task-title">
           <div>
             <h3>${task.title}</h3>
             <p>${task.description || ""}</p>
+            ${priorityMarkup}
             ${recurrenceMarkup}
             ${categoryMarkup}
             ${subtaskMarkup}
@@ -473,6 +812,125 @@ const renderChart = () => {
   });
 };
 
+// ==================== Projects UI Rendering ====================
+
+const renderProjects = () => {
+  const projects = loadProjects();
+  const currentProjectId = getCurrentProjectId();
+  const projectsList = document.getElementById('projectsList');
+  
+  if (!projectsList) return;
+  
+  projectsList.innerHTML = projects.map(project => {
+    const isActive = project.id === currentProjectId;
+    return `
+      <div class="project-item ${isActive ? 'active' : ''}" data-project-id="${project.id}">
+        <span class="project-name">${project.name}</span>
+        <div class="project-actions">
+          ${!project.isDefault ? `
+            <button class="project-action-btn delete-project" title="Delete project">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+};
+
+const handleProjectSelect = (projectId) => {
+  setCurrentProjectId(projectId);
+  renderProjects();
+  
+  // Refresh the current view
+  if (document.getElementById('taskList')) {
+    renderTasks();
+    renderStreak();
+    renderChart();
+  } else if (document.getElementById('pendingColumn')) {
+    renderBoard();
+  }
+};
+
+const handleDeleteProject = (projectId) => {
+  const projects = loadProjects();
+  const project = projects.find(p => p.id === projectId);
+  
+  if (!project || project.isDefault) {
+    return;
+  }
+  
+  if (confirm(`Delete project "${project.name}" and all its tasks?`)) {
+    deleteProject(projectId);
+    renderProjects();
+    
+    // Refresh the current view
+    if (document.getElementById('taskList')) {
+      renderTasks();
+      renderStreak();
+    } else if (document.getElementById('pendingColumn')) {
+      renderBoard();
+    }
+  }
+};
+
+const openProjectModal = (projectId = null) => {
+  const projectModal = document.getElementById('projectModal');
+  const projectForm = document.getElementById('projectForm');
+  const projectModalTitle = document.getElementById('projectModalTitle');
+  
+  if (!projectModal || !projectForm) return;
+  
+  if (projectId) {
+    const projects = loadProjects();
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      projectModalTitle.textContent = 'Edit Project';
+      projectForm.projectName.value = project.name;
+      projectForm.projectId.value = project.id;
+    }
+  } else {
+    projectModalTitle.textContent = 'New Project';
+    projectForm.reset();
+    projectForm.projectId.value = '';
+  }
+  
+  projectModal.classList.add('show');
+  projectModal.setAttribute('aria-hidden', 'false');
+  projectForm.projectName.focus();
+};
+
+const closeProjectModal = () => {
+  const projectModal = document.getElementById('projectModal');
+  if (projectModal) {
+    projectModal.classList.remove('show');
+    projectModal.setAttribute('aria-hidden', 'true');
+  }
+};
+
+const handleProjectFormSubmit = (event) => {
+  event.preventDefault();
+  const projectForm = document.getElementById('projectForm');
+  const projectId = projectForm.projectId.value;
+  const projectName = projectForm.projectName.value.trim();
+  
+  if (!projectName) return;
+  
+  if (projectId) {
+    // Edit existing project
+    renameProject(projectId, projectName);
+  } else {
+    // Create new project
+    createProject(projectName);
+  }
+  
+  renderProjects();
+  closeProjectModal();
+};
+
 const updateRecurrencePreview = () => {
   if (!recurrencePreview || !recurrencePattern) return;
   const pattern = recurrencePattern.value;
@@ -504,6 +962,7 @@ const openModal = (task) => {
   taskForm.title.value = task ? task.title : "";
   taskForm.description.value = task ? task.description : "";
   taskForm.status.value = task ? task.status : "Pending";
+  taskForm.priority.value = task && task.priority ? task.priority : "medium";
   taskForm.dueDate.value = task && task.dueDate ? task.dueDate : "";
   if (categorySelect) {
     categorySelect.value = "";
@@ -803,13 +1262,27 @@ const renderBoardTask = (task) => {
        ${getRecurrenceDisplay(task.recurrencePattern)}
      </span>` 
     : "";
+  
+  const priorityClass = task.priority || 'medium';
+  const priorityDisplay = {
+    'high': 'High Priority',
+    'medium': 'Medium Priority',
+    'low': 'Low Priority'
+  }[priorityClass] || 'Medium Priority';
+  
+  const priorityMarkup = `<span class="priority-badge priority-${priorityClass}" style="margin-bottom: 0.5rem; display: inline-flex;">
+    <span class="priority-indicator"></span>
+    ${priorityDisplay}
+  </span>`;
+  
   return `
-    <div class="task board-task" data-id="${task.id}" draggable="true" ${task.isRecurring ? 'data-recurring="true"' : ''}>
+    <div class="task board-task" data-id="${task.id}" data-priority="${priorityClass}" draggable="true" style="position: relative;" ${task.isRecurring ? 'data-recurring="true"' : ''}>
       <div class="task-title">
         <div>
           <h3>${task.title}</h3>
           ${task.description ? `<p class="text-sm text-[var(--muted)] mt-1">${task.description}</p>` : ''}
           <div style="margin-bottom: 0.5rem;">${recurrenceMarkup}</div>
+          ${priorityMarkup}
           ${categoryMarkup}
           ${subtaskMarkup}
         </div>
@@ -841,7 +1314,11 @@ const renderBoardTask = (task) => {
 };
 
 const renderBoard = () => {
-  const tasks = loadTasks();
+  const projectTasks = getProjectTasks();
+  const filters = getActiveFilters();
+  const searchQuery = getActiveSearchQuery();
+  const tasks = getFilteredTasks(projectTasks, filters, searchQuery);
+  
   const pending = tasks.filter(t => t.status === 'Pending');
   const inProgress = tasks.filter(t => t.status === 'In Progress');
   const done = tasks.filter(t => t.status === 'Done');
@@ -1085,7 +1562,9 @@ const handleUniversalFormSubmit = (event) => {
     title: taskForm.title.value.trim(),
     description: taskForm.description.value.trim(),
     status: taskForm.status.value,
+    priority: taskForm.priority.value || 'medium',
     dueDate: taskForm.dueDate.value,
+    projectId: existingTask ? existingTask.projectId : getCurrentProjectId(),
     categories: getSelectedCategories(),
     subtasks: getSubtasksFromEditor(),
     isRecurring: isRecurring && recurrencePatternValue ? true : false,
@@ -1186,6 +1665,45 @@ if (document.getElementById('taskList')) {
     if (recurrencePattern) {
       recurrencePattern.addEventListener("change", handleRecurrencePatternChange);
     }
+    
+    // Set up project management event listeners
+    renderProjects();
+    const projectsList = document.getElementById('projectsList');
+    if (projectsList) {
+      projectsList.addEventListener('click', (event) => {
+        const projectItem = event.target.closest('.project-item');
+        if (!projectItem) return;
+        const deleteBtn = event.target.closest('.delete-project');
+        const projectId = projectItem.dataset.projectId;
+        if (deleteBtn) {
+          handleDeleteProject(projectId);
+        } else {
+          handleProjectSelect(projectId);
+        }
+      });
+    }
+    const addProjectBtn = document.getElementById('addProjectBtn');
+    if (addProjectBtn) {
+      addProjectBtn.addEventListener('click', () => openProjectModal());
+    }
+    const closeProjectModalBtn = document.getElementById('closeProjectModal');
+    if (closeProjectModalBtn) {
+      closeProjectModalBtn.addEventListener('click', closeProjectModal);
+    }
+    const cancelProjectModalBtn = document.getElementById('cancelProjectModal');
+    if (cancelProjectModalBtn) {
+      cancelProjectModalBtn.addEventListener('click', closeProjectModal);
+    }
+    const projectModal = document.getElementById('projectModal');
+    if (projectModal) {
+      projectModal.addEventListener('click', (event) => {
+        if (event.target === projectModal) closeProjectModal();
+      });
+    }
+    const projectForm = document.getElementById('projectForm');
+    if (projectForm) {
+      projectForm.addEventListener('submit', handleProjectFormSubmit);
+    }
   });
 } else if (document.getElementById('pendingColumn')) {
   // Board view initialization
@@ -1245,10 +1763,230 @@ if (document.getElementById('taskList')) {
     if (recurrencePattern) {
       recurrencePattern.addEventListener("change", handleRecurrencePatternChange);
     }
+    
+    // Set up project management event listeners
+    renderProjects();
+    const projectsList = document.getElementById('projectsList');
+    if (projectsList) {
+      projectsList.addEventListener('click', (event) => {
+        const projectItem = event.target.closest('.project-item');
+        if (!projectItem) return;
+        const deleteBtn = event.target.closest('.delete-project');
+        const projectId = projectItem.dataset.projectId;
+        if (deleteBtn) {
+          handleDeleteProject(projectId);
+        } else {
+          handleProjectSelect(projectId);
+        }
+      });
+    }
+    const addProjectBtn = document.getElementById('addProjectBtn');
+    if (addProjectBtn) {
+      addProjectBtn.addEventListener('click', () => openProjectModal());
+    }
+    const closeProjectModalBtn = document.getElementById('closeProjectModal');
+    if (closeProjectModalBtn) {
+      closeProjectModalBtn.addEventListener('click', closeProjectModal);
+    }
+    const cancelProjectModalBtn = document.getElementById('cancelProjectModal');
+    if (cancelProjectModalBtn) {
+      cancelProjectModalBtn.addEventListener('click', closeProjectModal);
+    }
+    const projectModal = document.getElementById('projectModal');
+    if (projectModal) {
+      projectModal.addEventListener('click', (event) => {
+        if (event.target === projectModal) closeProjectModal();
+      });
+    }
+    const projectForm = document.getElementById('projectForm');
+    if (projectForm) {
+      projectForm.addEventListener('submit', handleProjectFormSubmit);
+    }
   });
 }
 
-// Export functionality
+// Filter functionality - applies to both views
+const setupFilterListeners = () => {
+  const toggleFilter = document.getElementById('toggleFilter');
+  const filterPanel = document.getElementById('filterPanel');
+  const applyFiltersBtn = document.getElementById('applyFilters');
+  const clearAllFiltersBtn = document.getElementById('clearAllFilters');
+  const closeFilterBtn = document.getElementById('closeFilter');
+  
+  // Populate filter panel with saved filters on load
+  populateFilterPanel();
+  
+  // Toggle filter panel visibility
+  if (toggleFilter) {
+    toggleFilter.addEventListener('click', () => {
+      if (filterPanel) {
+        filterPanel.classList.toggle('hidden');
+      }
+    });
+  }
+  
+  // Apply filters
+  if (applyFiltersBtn) {
+    applyFiltersBtn.addEventListener('click', () => {
+      const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+      const dateTo = document.getElementById('filterDateTo')?.value || '';
+      const categories = Array.from(document.querySelectorAll('[name="filterCategory"]:checked'))
+        .map(cb => cb.value);
+      const statuses = Array.from(document.querySelectorAll('[name="filterStatus"]:checked'))
+        .map(cb => cb.value);
+      const urgencies = Array.from(document.querySelectorAll('[name="filterUrgency"]:checked'))
+        .map(cb => cb.value);
+      
+      const filters = {
+        dateRange: { from: dateFrom, to: dateTo },
+        categories,
+        statuses,
+        urgencies,
+      };
+      
+      setFilters(filters);
+      
+      // Optionally close the panel after applying
+      if (filterPanel) {
+        filterPanel.classList.add('hidden');
+      }
+    });
+  }
+  
+  // Clear all filters
+  if (clearAllFiltersBtn) {
+    clearAllFiltersBtn.addEventListener('click', () => {
+      clearFilters();
+    });
+  }
+  
+  // Close filter panel
+  if (closeFilterBtn) {
+    closeFilterBtn.addEventListener('click', () => {
+      if (filterPanel) {
+        filterPanel.classList.add('hidden');
+      }
+    });
+  }
+};
+
+// Populate filter panel UI with saved filters
+const populateFilterPanel = () => {
+  const filters = getActiveFilters();
+  
+  // Set date inputs
+  const dateFromInput = document.getElementById('filterDateFrom');
+  const dateToInput = document.getElementById('filterDateTo');
+  if (dateFromInput && filters.dateRange?.from) {
+    dateFromInput.value = filters.dateRange.from;
+  }
+  if (dateToInput && filters.dateRange?.to) {
+    dateToInput.value = filters.dateRange.to;
+  }
+  
+  // Set category checkboxes
+  if (filters.categories && filters.categories.length > 0) {
+    filters.categories.forEach(cat => {
+      const checkbox = document.querySelector(`[name="filterCategory"][value="${cat}"]`);
+      if (checkbox) checkbox.checked = true;
+    });
+  }
+  
+  // Set status checkboxes
+  if (filters.statuses && filters.statuses.length > 0) {
+    filters.statuses.forEach(status => {
+      const checkbox = document.querySelector(`[name="filterStatus"][value="${status}"]`);
+      if (checkbox) checkbox.checked = true;
+    });
+  }
+  
+  // Set urgency checkboxes
+  if (filters.urgencies && filters.urgencies.length > 0) {
+    filters.urgencies.forEach(urgency => {
+      const checkbox = document.querySelector(`[name="filterUrgency"][value="${urgency}"]`);
+      if (checkbox) checkbox.checked = true;
+    });
+  }
+};
+
+// Setup search listeners
+const setupSearchListeners = () => {
+  const searchInput = document.getElementById('searchInput');
+  const searchClearBtn = document.getElementById('searchClearBtn');
+  const filterSearchInput = document.getElementById('filterSearchInput');
+  
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    
+    // Update both search inputs to stay in sync
+    if (searchInput && filterSearchInput) {
+      searchInput.value = query;
+      filterSearchInput.value = query;
+    }
+    
+    // Show/hide clear button
+    if (searchClearBtn) {
+      searchClearBtn.style.display = query ? 'block' : 'none';
+    }
+    
+    // Re-render tasks
+    if (document.getElementById('taskList')) {
+      renderTasks();
+    }
+    if (document.getElementById('pendingColumn')) {
+      renderBoard();
+    }
+  };
+  
+  // Header search input
+  if (searchInput) {
+    // Restore saved search query on load
+    const savedQuery = getActiveSearchQuery();
+    if (savedQuery) {
+      searchInput.value = savedQuery;
+      if (searchClearBtn) {
+        searchClearBtn.style.display = 'block';
+      }
+      if (filterSearchInput) {
+        filterSearchInput.value = savedQuery;
+      }
+    }
+    
+    searchInput.addEventListener('input', (e) => {
+      handleSearch(e.target.value);
+    });
+  }
+  
+  // Filter panel search input
+  if (filterSearchInput) {
+    // Restore saved search query on load
+    const savedQuery = getActiveSearchQuery();
+    if (savedQuery) {
+      filterSearchInput.value = savedQuery;
+    }
+    
+    filterSearchInput.addEventListener('input', (e) => {
+      handleSearch(e.target.value);
+    });
+  }
+  
+  // Clear search button
+  if (searchClearBtn) {
+    searchClearBtn.addEventListener('click', () => {
+      handleSearch('');
+      if (searchInput) {
+        searchInput.focus();
+      }
+    });
+  }
+};
+
+// Initialize filter listeners on page load
+window.addEventListener('load', () => {
+  setupFilterListeners();
+  setupSearchListeners();
+});
+
 const exportModal = document.getElementById("exportModal");
 const exportToggle = document.getElementById("exportToggle");
 const closeExportModal = document.getElementById("closeExportModal");

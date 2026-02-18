@@ -12,6 +12,24 @@
   </head>
   <body class="m-0 font-sans bg-gradient-radial min-h-screen">
     <div class="bg-accent"></div>
+    <div class="search-container">
+      <input 
+        type="text" 
+        id="searchInput" 
+        class="search-input" 
+        placeholder="Search tasks..." 
+        aria-label="Search tasks"
+      />
+      <button 
+        class="search-clear-btn" 
+        id="searchClearBtn" 
+        type="button" 
+        title="Clear search"
+        style="display: none;"
+      >
+        ✕
+      </button>
+    </div>
     <button class="theme-toggle" id="themeToggle" type="button" aria-pressed="false">
       <span class="theme-toggle__icon" aria-hidden="true"></span>
       <span class="theme-toggle__label" data-theme-label>Dark mode</span>

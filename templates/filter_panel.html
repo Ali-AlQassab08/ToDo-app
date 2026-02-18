@@ -1,0 +1,124 @@
+<div class="filter-panel bg-[var(--card)] rounded-3xl p-6 shadow-[0_18px_36px_var(--shadow)] mb-6 hidden" id="filterPanel">
+  <div class="flex items-center justify-between mb-6">
+    <h3 class="font-serif m-0 text-[1.2rem]">Filter tasks</h3>
+    <button class="btn ghost border-none px-3 py-2 rounded-full cursor-pointer transition-all" id="closeFilter" title="Close filter panel">
+      <span>✕</span>
+    </button>
+  </div>
+
+  <!-- Search Filter -->
+  <div class="filter-group mb-6">
+    <label class="block text-sm font-semibold mb-2 text-[var(--muted)]">Search Tasks</label>
+    <input 
+      type="text" 
+      id="filterSearchInput" 
+      class="search-filter-input w-full border border-[#e0e0e0] rounded-lg px-3 py-2 text-sm"
+      placeholder="Search by title, description, or subtasks..."
+    />
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <!-- Date Range Filter -->
+    <div class="filter-group">
+      <label class="block text-sm font-semibold mb-2 text-[var(--muted)]">Date Range</label>
+      <div class="flex flex-col gap-2">
+        <input 
+          type="date" 
+          id="filterDateFrom" 
+          class="border border-[#e0e0e0] rounded-lg px-3 py-2 text-sm"
+          placeholder="From"
+        />
+        <input 
+          type="date" 
+          id="filterDateTo" 
+          class="border border-[#e0e0e0] rounded-lg px-3 py-2 text-sm"
+          placeholder="To"
+        />
+      </div>
+    </div>
+
+    <!-- Category Filter -->
+    <div class="filter-group">
+      <label class="block text-sm font-semibold mb-2 text-[var(--muted)]">Category</label>
+      <div class="flex flex-col gap-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterCategory" value="Studying" />
+          <span>Studying</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterCategory" value="Work" />
+          <span>Work</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterCategory" value="Finances" />
+          <span>Finances</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterCategory" value="Workout" />
+          <span>Workout</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterCategory" value="Other" />
+          <span>Other</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Status Filter -->
+    <div class="filter-group">
+      <label class="block text-sm font-semibold mb-2 text-[var(--muted)]">Status</label>
+      <div class="flex flex-col gap-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterStatus" value="Pending" />
+          <span>Pending</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterStatus" value="In Progress" />
+          <span>In Progress</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterStatus" value="Done" />
+          <span>Done</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Urgency Filter -->
+    <div class="filter-group">
+      <label class="block text-sm font-semibold mb-2 text-[var(--muted)]">Due Date Urgency</label>
+      <div class="flex flex-col gap-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterUrgency" value="Overdue" />
+          <span>Overdue</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterUrgency" value="Today" />
+          <span>Today</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterUrgency" value="This Week" />
+          <span>This Week</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="filterUrgency" value="Later" />
+          <span>Later</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex gap-3 mt-6">
+    <button 
+      class="btn primary border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-[var(--accent)] text-white shadow-[0_12px_24px_rgba(255,111,91,0.35)] hover:-translate-y-0.5"
+      id="applyFilters"
+    >
+      Apply Filters
+    </button>
+    <button 
+      class="btn ghost border-none px-5 py-3 rounded-full font-semibold text-[0.95rem] cursor-pointer transition-all duration-200 bg-white text-[var(--ink)] border border-[#f0e5dc] hover:-translate-y-0.5"
+      id="clearAllFilters"
+    >
+      Clear All
+    </button>
+  </div>
+</div>

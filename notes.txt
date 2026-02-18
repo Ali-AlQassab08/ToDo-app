@@ -1,0 +1,5 @@
+### 2. Task Organization
+- **Task Filtering**: Filter by date range, category, status, or due date urgency
+- **Task Search**: Full-text search across titles and descriptions
+- **Task Priority Levels**: Add high/medium/low priority indicators (color-coded)
+- **Multiple Projects/Lists**: Organize tasks into separate lists/projects instead of one flat list
