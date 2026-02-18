@@ -1,6 +1,8 @@
 const TASKS_KEY = "todoTasks";
 const HISTORY_KEY = "todoProgress";
 const THEME_KEY = "todoTheme";
+const FILTERS_KEY = "todoFilters";
+const SEARCH_KEY = "todoSearchQuery";
 
 const modal = document.getElementById("taskModal");
 const themeToggle = document.getElementById("themeToggle");
@@ -93,12 +95,54 @@ const CATEGORY_STYLES = {
   Other: { bg: "#e9d5ff", text: "#2a163f" },
 };
 
-const FILTERS_KEY = "todoFilters";
-
 // Filter state management
 const getActiveFilters = () => {
   const raw = localStorage.getItem(FILTERS_KEY);
   return raw ? JSON.parse(raw) : { dateRange: { from: '', to: '' }, categories: [], statuses: [], urgencies: [] };
+};
+
+const getActiveSearchQuery = () => {
+  return localStorage.getItem(SEARCH_KEY) || '';
+};
+
+const setSearchQuery = (query) => {
+  if (query && query.trim()) {
+    localStorage.setItem(SEARCH_KEY, query.trim());
+  } else {
+    localStorage.removeItem(SEARCH_KEY);
+  }
+};
+
+// Full-text search across task title, description, and subtasks
+const searchTasks = (tasks, query) => {
+  if (!query || !query.trim()) {
+    return tasks;
+  }
+
+  const lowerQuery = query.toLowerCase().trim();
+  return tasks.filter(task => {
+    // Search in title
+    if (task.title && task.title.toLowerCase().includes(lowerQuery)) {
+      return true;
+    }
+
+    // Search in description
+    if (task.description && task.description.toLowerCase().includes(lowerQuery)) {
+      return true;
+    }
+
+    // Search in subtasks
+    if (task.subtasks && Array.isArray(task.subtasks)) {
+      const hasMatchingSubtask = task.subtasks.some(subtask =>
+        subtask.text && subtask.text.toLowerCase().includes(lowerQuery)
+      );
+      if (hasMatchingSubtask) {
+        return true;
+      }
+    }
+
+    return false;
+  });
 };
 
 const setFilters = (filterObj) => {
@@ -156,45 +200,51 @@ const getTaskUrgency = (dueDate) => {
   return 'Later';
 };
 
-// Filter tasks based on active filters
-const getFilteredTasks = (tasks, filters) => {
-  if (!filters || (!filters.dateRange?.from && !filters.dateRange?.to && 
-      (!filters.categories || filters.categories.length === 0) &&
-      (!filters.statuses || filters.statuses.length === 0) &&
-      (!filters.urgencies || filters.urgencies.length === 0))) {
-    return tasks;
+// Filter tasks based on active filters and search query
+const getFilteredTasks = (tasks, filters, searchQuery) => {
+  // Convert searchQuery to empty string if undefined
+  const query = searchQuery || getActiveSearchQuery();
+  
+  // First apply categorical filters
+  let filtered = tasks;
+  if (filters && (filters.dateRange?.from || filters.dateRange?.to || 
+      (filters.categories && filters.categories.length > 0) ||
+      (filters.statuses && filters.statuses.length > 0) ||
+      (filters.urgencies && filters.urgencies.length > 0))) {
+    filtered = tasks.filter(task => {
+      // Date range filter
+      if (filters.dateRange?.from || filters.dateRange?.to) {
+        if (!task.dueDate) return false;
+        const taskDate = new Date(task.dueDate).toISOString().split('T')[0];
+        if (filters.dateRange.from && taskDate < filters.dateRange.from) return false;
+        if (filters.dateRange.to && taskDate > filters.dateRange.to) return false;
+      }
+
+      // Category filter (OR logic - task needs at least one selected category)
+      if (filters.categories && filters.categories.length > 0) {
+        const hasCategory = filters.categories.some(cat => 
+          task.categories && task.categories.includes(cat)
+        );
+        if (!hasCategory) return false;
+      }
+
+      // Status filter (OR logic - task needs at least one selected status)
+      if (filters.statuses && filters.statuses.length > 0) {
+        if (!filters.statuses.includes(task.status)) return false;
+      }
+
+      // Urgency filter (OR logic - task needs at least one selected urgency)
+      if (filters.urgencies && filters.urgencies.length > 0) {
+        const taskUrgency = getTaskUrgency(task.dueDate);
+        if (!filters.urgencies.includes(taskUrgency)) return false;
+      }
+
+      return true;
+    });
   }
 
-  return tasks.filter(task => {
-    // Date range filter
-    if (filters.dateRange?.from || filters.dateRange?.to) {
-      if (!task.dueDate) return false;
-      const taskDate = new Date(task.dueDate).toISOString().split('T')[0];
-      if (filters.dateRange.from && taskDate < filters.dateRange.from) return false;
-      if (filters.dateRange.to && taskDate > filters.dateRange.to) return false;
-    }
-
-    // Category filter (OR logic - task needs at least one selected category)
-    if (filters.categories && filters.categories.length > 0) {
-      const hasCategory = filters.categories.some(cat => 
-        task.categories && task.categories.includes(cat)
-      );
-      if (!hasCategory) return false;
-    }
-
-    // Status filter (OR logic - task needs at least one selected status)
-    if (filters.statuses && filters.statuses.length > 0) {
-      if (!filters.statuses.includes(task.status)) return false;
-    }
-
-    // Urgency filter (OR logic - task needs at least one selected urgency)
-    if (filters.urgencies && filters.urgencies.length > 0) {
-      const taskUrgency = getTaskUrgency(task.dueDate);
-      if (!filters.urgencies.includes(taskUrgency)) return false;
-    }
-
-    return true;
-  });
+  // Then apply text search (AND logic - must match both filters and search)
+  return searchTasks(filtered, query);
 };
 
 const getToday = () => new Date().toISOString().split("T")[0];
@@ -466,7 +516,8 @@ const getSelectedCategories = () => {
 const renderTasks = () => {
   const allTasks = loadTasks();
   const filters = getActiveFilters();
-  const tasks = getFilteredTasks(allTasks, filters);
+  const searchQuery = getActiveSearchQuery();
+  const tasks = getFilteredTasks(allTasks, filters, searchQuery);
   
   if (allTasks.length === 0) {
     taskList.innerHTML = "<div class=\"empty\">No tasks yet. Add your first one.</div>";
@@ -955,7 +1006,8 @@ const renderBoardTask = (task) => {
 const renderBoard = () => {
   const allTasks = loadTasks();
   const filters = getActiveFilters();
-  const tasks = getFilteredTasks(allTasks, filters);
+  const searchQuery = getActiveSearchQuery();
+  const tasks = getFilteredTasks(allTasks, filters, searchQuery);
   
   const pending = tasks.filter(t => t.status === 'Pending');
   const inProgress = tasks.filter(t => t.status === 'In Progress');
@@ -1467,8 +1519,83 @@ const populateFilterPanel = () => {
   }
 };
 
+// Setup search listeners
+const setupSearchListeners = () => {
+  const searchInput = document.getElementById('searchInput');
+  const searchClearBtn = document.getElementById('searchClearBtn');
+  const filterSearchInput = document.getElementById('filterSearchInput');
+  
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    
+    // Update both search inputs to stay in sync
+    if (searchInput && filterSearchInput) {
+      searchInput.value = query;
+      filterSearchInput.value = query;
+    }
+    
+    // Show/hide clear button
+    if (searchClearBtn) {
+      searchClearBtn.style.display = query ? 'block' : 'none';
+    }
+    
+    // Re-render tasks
+    if (document.getElementById('taskList')) {
+      renderTasks();
+    }
+    if (document.getElementById('pendingColumn')) {
+      renderBoard();
+    }
+  };
+  
+  // Header search input
+  if (searchInput) {
+    // Restore saved search query on load
+    const savedQuery = getActiveSearchQuery();
+    if (savedQuery) {
+      searchInput.value = savedQuery;
+      if (searchClearBtn) {
+        searchClearBtn.style.display = 'block';
+      }
+      if (filterSearchInput) {
+        filterSearchInput.value = savedQuery;
+      }
+    }
+    
+    searchInput.addEventListener('input', (e) => {
+      handleSearch(e.target.value);
+    });
+  }
+  
+  // Filter panel search input
+  if (filterSearchInput) {
+    // Restore saved search query on load
+    const savedQuery = getActiveSearchQuery();
+    if (savedQuery) {
+      filterSearchInput.value = savedQuery;
+    }
+    
+    filterSearchInput.addEventListener('input', (e) => {
+      handleSearch(e.target.value);
+    });
+  }
+  
+  // Clear search button
+  if (searchClearBtn) {
+    searchClearBtn.addEventListener('click', () => {
+      handleSearch('');
+      if (searchInput) {
+        searchInput.focus();
+      }
+    });
+  }
+};
+
 // Initialize filter listeners on page load
-window.addEventListener('load', setupFilterListeners);
+window.addEventListener('load', () => {
+  setupFilterListeners();
+  setupSearchListeners();
+});
 
 const exportModal = document.getElementById("exportModal");
 const exportToggle = document.getElementById("exportToggle");
