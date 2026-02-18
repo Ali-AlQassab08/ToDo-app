@@ -2,6 +2,7 @@
 
 **Student:** Ali-AlQassab08  
 **Repository:** https://github.com/Ali-AlQassab08/ToDo-app  
+**release:** https://github.com/Ali-AlQassab08/ToDo-app/releases/tag/v0.9.0
 **Submission Date:** February 18, 2026
 
 ---
