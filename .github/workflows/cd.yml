@@ -36,8 +36,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:${{ steps.version.outputs.version }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/todo-app:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/todo_app:${{ steps.version.outputs.version }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/todo_app:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
