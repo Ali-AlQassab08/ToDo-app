@@ -1,8 +1,8 @@
 # CI/CD Submission - ToDo App
 
-**Student Name:** [Your Name]  
+**Student Name:** [Ali AlQassab]  
 **Date:** February 22, 2026  
-**Course:** [Course Name]
+**Course:** [CC302]
 
 ---
 
