@@ -1,6 +1,8 @@
 FROM python:3.12-slim
 
-LABEL org.opencontainers.image.version="0.2.1"
+LABEL org.opencontainers.image.version="0.9.0" \
+      org.opencontainers.image.title="Daily Flow - Task Management App" \
+      org.opencontainers.image.description="A modern task management application with advanced features including drag-drop, recurring tasks, filtering, search, priorities, multiple projects, categories, export, progress charts, and dark mode"
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
