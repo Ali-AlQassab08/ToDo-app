@@ -19,7 +19,7 @@ def test_app_import():
 def test_index_route(client):
     """Test GET / returns 200 and contains HTML."""
     response = client.get('/')
-    assert response.status_code == 201
+    assert response.status_code == 200
     assert b'<!DOCTYPE html>' in response.data or b'<html' in response.data
 
 
